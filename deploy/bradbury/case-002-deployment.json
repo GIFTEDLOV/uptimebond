@@ -1,0 +1,136 @@
+{
+  "record_version": "1.0.0",
+  "case": "case-002-partial-refund",
+  "description": "UptimeBond deployment adjudicating the NimbusAPI May 2026 partial-refund dispute, where a maintenance window announced 2 hours ahead fails the SLA's 24-hour notice requirement.",
+  "network": {
+    "alias": "testnet-bradbury",
+    "name": "Genlayer Bradbury Testnet",
+    "chain_id": 4221,
+    "rpc": "https://rpc-bradbury.genlayer.com",
+    "explorer": "https://explorer-bradbury.genlayer.com/",
+    "consensus_main_contract": "0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D"
+  },
+  "source": {
+    "repository": "https://github.com/GIFTEDLOV/uptimebond",
+    "commit": "ad0018207edfba936b4074d3f1ccb5a2df58ac3b",
+    "contract_path": "contracts/uptime_bond.py",
+    "runner_pin": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6",
+    "source_verification": {
+      "method": "deployment calldata inspected via genlayer-py get_transaction(tx_data)",
+      "calldata_bytes": 30811,
+      "runner_pin_present": true,
+      "contains_ad00182_address_fix": true,
+      "contains_zero_address_guard": true,
+      "contains_self_dealing_guard": true,
+      "contains_old_double_conversion_bug": false,
+      "contains_old_provider_str_signature": false,
+      "note": "genlayer schema/code CLI commands are Studio-only and unavailable on Bradbury, so verification was performed against the deployment calldata rather than a code fetch."
+    }
+  },
+  "deployment": {
+    "contract_address": "0x4dc6b188b3025f92F133515c3041cbc4E2019988",
+    "transaction_hash": "0xecf36d39303a992e010e4b9b6029e8146cc5dd4c1f5069b91513336807cb46a4",
+    "tx_execution_hash": "0x15e3cde293cf79ad9bf3d6b425247c5ce7336be2b0b71e5c39e4fd1f07fe3c45",
+    "type": "deploy",
+    "explorer_tx": "https://explorer-bradbury.genlayer.com/tx/0xecf36d39303a992e010e4b9b6029e8146cc5dd4c1f5069b91513336807cb46a4",
+    "explorer_contract": "https://explorer-bradbury.genlayer.com/address/0x4dc6b188b3025f92F133515c3041cbc4E2019988",
+    "created_timestamp": 1784636234,
+    "last_vote_timestamp": 1784636244,
+    "created_at_utc": "2026-07-21T08:17:14Z",
+    "read_state_block_range": {
+      "activation_block": "15004248",
+      "processing_block": "15004248",
+      "proposal_block": "15004251"
+    }
+  },
+  "consensus": {
+    "status": 7,
+    "status_name": "FINALIZED",
+    "result": 1,
+    "result_name": "AGREE",
+    "execution_result_name": "FINISHED_WITH_RETURN",
+    "num_of_initial_validators": 3,
+    "initial_rotations": 3,
+    "num_of_rounds": 0,
+    "leader_index": 4,
+    "last_leader": "0x77a07271abB443F55be19c357AA35206BeB63E1d",
+    "activator": "0x7538369A22a176afFccb6B273eedfbb92780bf22",
+    "votes_committed": 5,
+    "votes_revealed": 5,
+    "validator_votes": ["AGREE", "AGREE", "AGREE", "AGREE", "AGREE"],
+    "validators": [
+      "0x2d012a292244C7ce6423a114d19109990923Af76",
+      "0xA58D6FcCD69eaafB5869dA58913f116045D75444",
+      "0x4FC292d5D255Ec8Ad4cdcd36c5E188dfEE9D160e",
+      "0x3E1E6060f746c78DB2BE0909C30A1f6A41AcD011",
+      "0x77a07271abB443F55be19c357AA35206BeB63E1d"
+    ],
+    "validator_result_hash_unanimous": "0x35cc42f24e26fe803b8a7a92411f67620cb983cc961db50084de8ab601a137c1"
+  },
+  "parties": {
+    "customer": {
+      "account_name": "deployer",
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "role": "customer (deployer of the agreement, funds the escrow)"
+    },
+    "provider": {
+      "account_name": "provider",
+      "address": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+      "role": "provider (accepts the SLA, receives the unrefunded remainder)"
+    }
+  },
+  "constructor_arguments": {
+    "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "sla_terms_url": "https://raw.githubusercontent.com/GIFTEDLOV/uptimebond/ad0018207edfba936b4074d3f1ccb5a2df58ac3b/evidence/case-002-partial-refund/sla-terms.json",
+    "independent_monitor_url": "https://raw.githubusercontent.com/GIFTEDLOV/uptimebond/ad0018207edfba936b4074d3f1ccb5a2df58ac3b/evidence/case-002-partial-refund/monitor-report.json",
+    "provider_status_url": "https://raw.githubusercontent.com/GIFTEDLOV/uptimebond/ad0018207edfba936b4074d3f1ccb5a2df58ac3b/evidence/case-002-partial-refund/provider-status.json",
+    "maintenance_announcements_url": "https://raw.githubusercontent.com/GIFTEDLOV/uptimebond/ad0018207edfba936b4074d3f1ccb5a2df58ac3b/evidence/case-002-partial-refund/maintenance-announcements.json",
+    "deadlock_refund_bps": 5000,
+    "dispute_deadlock_seconds": 86400,
+    "insufficient_evidence_deadlock_seconds": 86400
+  },
+  "evidence": {
+    "commit_pinned": true,
+    "mutable_branch_urls_used": false,
+    "case_directory": "evidence/case-002-partial-refund/",
+    "availability_check": {
+      "checked_at_utc": "2026-07-21T11:15:00Z",
+      "sla-terms.json": { "http_status": 200, "bytes": 2993, "matches_local_commit": true },
+      "monitor-report.json": { "http_status": 200, "bytes": 2684, "matches_local_commit": true },
+      "provider-status.json": { "http_status": 200, "bytes": 1890, "matches_local_commit": true },
+      "maintenance-announcements.json": { "http_status": 200, "bytes": 1171, "matches_local_commit": true }
+    }
+  },
+  "verified_initial_state": {
+    "verified_at_utc": "2026-07-21T11:15:41Z",
+    "customer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "status": "AWAITING_FUNDING",
+    "escrow_atto": 0,
+    "resolution_mode": "",
+    "outcome": "",
+    "refund_bps": 0,
+    "maintenance_qualified": false,
+    "breached_clause_ids": [],
+    "incident_window": "",
+    "dispute_opened_at": 0,
+    "insufficient_evidence_ruled_at": 0,
+    "settlement_pending": false,
+    "settlement_proposer": "0x0000000000000000000000000000000000000000",
+    "settlement_refund_bps": 0,
+    "all_phase_a_assertions_passed": true
+  },
+  "expected_adjudication": {
+    "note": "Recorded here as the operator's expectation for verification. This value is NOT supplied to the contract or to validators; every validator re-fetches the evidence and derives the ruling independently.",
+    "outcome": "PARTIAL_REFUND",
+    "refund_bps": 2500,
+    "maintenance_qualified": false,
+    "measured_uptime_percent": 99.10,
+    "rationale": "Maintenance window announced 2026-05-12T03:00:00Z for a 05:00:00Z start — 2.0 hours notice against the SLA-2 requirement of 24 hours, so the 300-minute window is not excluded and counts in full."
+  },
+  "ghost_contract_warning": {
+    "address": "0xB82f70950BbEfBC6829c463A5922Bb1B6333C637",
+    "failed_transaction": "0x97067332cdaa76167cd1b93961d68c15db538503f2da80c17f5335f636f096df",
+    "instruction": "NEVER fund or interact with this address. It is the failed deployment from the pre-ad00182 constructor bug."
+  }
+}

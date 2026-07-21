@@ -1,0 +1,117 @@
+{
+  "action": "receipt",
+  "tx": "0x9a723f95db04993a776fce234bc1301bc58c4281839a905c41ed20fd094cd4f8",
+  "classification": {
+    "ok": true,
+    "consensus_status": "ACCEPTED",
+    "consensus_result": "AGREE",
+    "execution_result": "FINISHED_WITH_RETURN",
+    "validator_votes": [
+      "AGREE",
+      "AGREE",
+      "AGREE",
+      "AGREE",
+      "AGREE"
+    ],
+    "validator_tally": {
+      "AGREE": 5
+    },
+    "validators": [
+      "0x3a130401885fD9322E2E21174A5496065f716b35",
+      "0xb4Fb7ADc6877a6A16bd131c7c9270834bD3DEf34",
+      "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+      "0xA58D6FcCD69eaafB5869dA58913f116045D75444",
+      "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21"
+    ],
+    "leader_index": "2",
+    "votes_committed": "5",
+    "votes_revealed": "5"
+  },
+  "receipt": {
+    "currentTimestamp": "1784646589",
+    "sender": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "recipient": "0x4dc6b188b3025f92F133515c3041cbc4E2019988",
+    "initialRotations": "3",
+    "txSlot": "1",
+    "createdTimestamp": "1784645604",
+    "lastVoteTimestamp": "1784645612",
+    "randomSeed": "0x6bce76ea096e687a081533423d90b79ef2fc8a21a6105c48eccd7df8204c2e90",
+    "result": 1,
+    "txExecutionHash": "0x69a2e6c00e17e0574d574b1b2dc62aad645b0309b194839c823c2efe746727a6",
+    "txCalldata": "0xcf8d0e066d6574686f642466756e6400",
+    "eqBlocksOutputs": "0xc786706164646564",
+    "queueType": 0,
+    "queuePosition": "0",
+    "activator": "0xb4Fb7ADc6877a6A16bd131c7c9270834bD3DEf34",
+    "lastLeader": "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+    "status": 5,
+    "txId": "0x9a723f95db04993a776fce234bc1301bc58c4281839a905c41ed20fd094cd4f8",
+    "readStateBlockRange": {
+      "activationBlock": "15010879",
+      "processingBlock": "15010879",
+      "proposalBlock": "15010880"
+    },
+    "numOfRounds": "0",
+    "lastRound": {
+      "round": "0",
+      "leaderIndex": "2",
+      "votesCommitted": "5",
+      "votesRevealed": "5",
+      "appealBond": "0",
+      "rotationsLeft": "3",
+      "result": 1,
+      "roundValidators": [
+        "0x3a130401885fD9322E2E21174A5496065f716b35",
+        "0xb4Fb7ADc6877a6A16bd131c7c9270834bD3DEf34",
+        "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+        "0xA58D6FcCD69eaafB5869dA58913f116045D75444",
+        "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21"
+      ],
+      "validatorVotes": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "validatorVotesHash": [
+        "0xef6bd13e40accf176cc172ff6d46d56c9955245f6f3255b02c2d5491cdebb941",
+        "0x5fa95263468416c88b858a43a9568991e59661d768b8b49038b3becc352f8188",
+        "0xcb6e2b74061066199816c1e752b197bc52fbf7349be56387c05736cabe159d67",
+        "0x9102da28026617acf2674e801c7e3fdf8b298ad0ff9d9da89a36b9465ffc98b6",
+        "0x2114f91dc6f4331a2711c62a0b439e1513dd7ee666c764e690b15184e2006353"
+      ],
+      "validatorResultHash": [
+        "0x279d8771c0a9c9236ba3879349349a6a2e37ec8708b1503b8110ec884d4d2405",
+        "0x279d8771c0a9c9236ba3879349349a6a2e37ec8708b1503b8110ec884d4d2405",
+        "0x279d8771c0a9c9236ba3879349349a6a2e37ec8708b1503b8110ec884d4d2405",
+        "0x279d8771c0a9c9236ba3879349349a6a2e37ec8708b1503b8110ec884d4d2405",
+        "0x279d8771c0a9c9236ba3879349349a6a2e37ec8708b1503b8110ec884d4d2405"
+      ],
+      "validatorVotesName": [
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE"
+      ]
+    },
+    "consumedValidators": [
+      "0x3a130401885fD9322E2E21174A5496065f716b35",
+      "0xb4Fb7ADc6877a6A16bd131c7c9270834bD3DEf34",
+      "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+      "0xA58D6FcCD69eaafB5869dA58913f116045D75444",
+      "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21"
+    ],
+    "txExecutionResult": 1,
+    "txData": "0xcf8d0e066d6574686f642466756e6400",
+    "txDataDecoded": {
+      "leaderOnly": false,
+      "type": "call"
+    },
+    "numOfInitialValidators": "3",
+    "status_name": "ACCEPTED",
+    "resultName": "AGREE",
+    "txExecutionResultName": "FINISHED_WITH_RETURN"
+  }
+}
