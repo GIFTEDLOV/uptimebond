@@ -133,7 +133,7 @@ class UptimeBond(gl.Contract):
 
     def __init__(
         self,
-        provider: str,
+        provider: Address,
         sla_terms_url: str,
         independent_monitor_url: str,
         provider_status_url: str,
@@ -144,6 +144,19 @@ class UptimeBond(gl.Contract):
     ):
         # Deployer is the customer. Evidence sources and deadlock parameters are
         # pinned here, before the provider accepts, and are never mutated.
+        #
+        # `provider` arrives already decoded as an Address: constructor arguments
+        # are calldata-encoded by the caller and decoded before __init__ runs, so
+        # an address-typed argument is an Address here, never a hex string. Do not
+        # re-wrap it — Address(Address) raises TypeError and fails deployment.
+        if provider == _ZERO_ADDRESS:
+            raise gl.vm.UserError(
+                f"{ERROR_INPUT} Provider cannot be the zero address"
+            )
+        if provider == gl.message.sender_address:
+            raise gl.vm.UserError(
+                f"{ERROR_INPUT} Customer and provider must be different addresses"
+            )
         if not sla_terms_url or not independent_monitor_url:
             raise gl.vm.UserError(f"{ERROR_INPUT} SLA terms and monitor URLs are required")
         if deadlock_refund_bps < 0 or deadlock_refund_bps > _BPS_DENOM:
@@ -162,7 +175,7 @@ class UptimeBond(gl.Contract):
             )
 
         self.customer = gl.message.sender_address
-        self.provider = Address(provider)
+        self.provider = provider
 
         self.sla_terms_url = sla_terms_url
         self.independent_monitor_url = independent_monitor_url

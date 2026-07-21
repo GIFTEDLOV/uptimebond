@@ -1,10 +1,12 @@
 """Shared fixtures and mock helpers for UptimeBond direct-mode tests."""
 
 import json
+from pathlib import Path
 
 import pytest
 
 CONTRACT = "contracts/uptime_bond.py"
+CONTRACT_PATH = Path(__file__).resolve().parents[2] / "contracts" / "uptime_bond.py"
 
 # Evidence source URLs pinned at construction. Tests mock these exact hosts.
 SLA_TERMS_URL = "https://evidence.example.com/sla/terms.json"
@@ -19,6 +21,57 @@ IE_DEADLOCK_SECONDS = 604800
 
 ONE_ETH = 10**18
 INCIDENT = "2026-05-02T00:00:00Z/2026-05-02T06:00:00Z"
+
+
+def address_cls():
+    """The SDK's `Address`, with the SDK put on `sys.path` first.
+
+    Direct mode only wires up the SDK during `deploy_contract`, and tears it
+    back down after each test — but an address-typed constructor argument has
+    to exist *before* the deploy call. `setup_sdk_paths` is idempotent, so
+    calling it here is safe and gives us the same `Address` class the contract
+    will see.
+    """
+    from gltest.direct.sdk_loader import setup_sdk_paths
+
+    setup_sdk_paths(CONTRACT_PATH)
+    from genlayer.py.types import Address
+
+    return Address
+
+
+def calldata_mod():
+    """The SDK's `calldata` codec, with the SDK put on `sys.path` first.
+
+    Same lazy-import dance as `address_cls`: tests that assert on the
+    encode/decode contract need the module before any deploy has run.
+    """
+    address_cls()  # ensures sys.path is set up
+    from genlayer.py import calldata
+
+    return calldata
+
+
+def as_address(raw):
+    """Build the `Address` a deployment argument arrives as in production.
+
+    Constructor arguments are calldata-encoded by the caller and decoded before
+    `__init__` runs. An `Address` survives that round trip as an `Address`; a
+    hex *string* survives it as a `str`. Passing a string here would therefore
+    exercise a code path that cannot occur on-chain — which is precisely how
+    the Bradbury deployment failure escaped this suite.
+    """
+    Address = address_cls()
+    if isinstance(raw, bytes):
+        return Address(raw)
+    if isinstance(raw, str):
+        return Address(bytes.fromhex(raw.removeprefix("0x")))
+    return raw
+
+
+def zero_address():
+    """The 20-byte zero address, as the contract's `_ZERO_ADDRESS`."""
+    return address_cls()(bytes(20))
 
 
 def ts(iso):
@@ -54,7 +107,8 @@ def deploy_bond(direct_vm, direct_deploy, direct_alice, direct_bob):
 
     def _deploy(**overrides):
         args = {
-            "provider": to_hex(direct_bob),
+            # An Address, not a hex string: this is what the CLI decodes to.
+            "provider": as_address(direct_bob),
             "sla_terms_url": SLA_TERMS_URL,
             "independent_monitor_url": MONITOR_URL,
             "provider_status_url": STATUS_URL,
