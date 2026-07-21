@@ -27,3 +27,18 @@ GenLayer RPC error (eth_sendRawTransaction): server returned an error response: 
 GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
 [case-003-full-refund] 03-open-dispute: node refused submission (2/6), retrying in 40s — An internal error was received.
 [case-003-full-refund] 03-open-dispute: tx 0x7d171a6127a91568df05d6f914722d8f96bfe23cd45cd1f3f50d4bfffe9bfd94
+[case-003-full-refund] 03-open-dispute: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-003-full-refund] state: DISPUTED
+[case-003-full-refund] rule: this is the real validator adjudication — evidence is re-fetched by every validator
+[case-003-full-refund] 04-rule: rule as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-003-full-refund] 04-rule: node refused submission (1/6), retrying in 20s — An internal error was received.
+[case-003-full-refund] 04-rule: tx 0x5bc8caaae8becf23d9135b0ca787160f68777d3dedb9793377f350ac0e61ec8a
+[case-003-full-refund] 04-rule: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":3,"TIMEOUT":1,"DETERMINISTIC_VIOLATION":1} -> SUCCESS
+[case-003-full-refund] state: RULED outcome=FULL_REFUND
+[case-003-full-refund] 05-release: release as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+[case-003-full-refund] 05-release: tx 0xb6d5f52a948743ec5c4bbf50c7c70e10731edc83b4ea894fb34110b085f5bd88
+[case-003-full-refund] 05-release: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-003-full-refund] state: RESOLVED outcome=FULL_REFUND
+[case-003-full-refund] RESOLVED via CONSENSUS_RULING — lifecycle complete.
+[case-003-full-refund] final: {"status":"RESOLVED","outcome":"FULL_REFUND","refund_bps":10000,"maintenance_qualified":false,"breached":["SLA-1","SLA-4"],"resolution_mode":"CONSENSUS_RULING"}

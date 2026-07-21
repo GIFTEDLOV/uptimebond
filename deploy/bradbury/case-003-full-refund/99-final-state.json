@@ -1,0 +1,34 @@
+{
+  "case": "case-003-full-refund",
+  "contract": "0x7EA49E783B4839a20c39F77FFe62b3beF10195b7",
+  "expected": {
+    "outcome": "FULL_REFUND",
+    "refund_bps": 10000,
+    "maintenance_qualified": false,
+    "settleable": true,
+    "customer_share_bps": 10000,
+    "provider_share_bps": 0
+  },
+  "final_state": {
+    "breached_clause_ids": [
+      "SLA-1",
+      "SLA-4"
+    ],
+    "customer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "dispute_opened_at": 1784650196,
+    "escrow_atto": "100000000000000000",
+    "incident_window": "NimbusAPI May 2026 major unannounced outage dispute",
+    "insufficient_evidence_ruled_at": 0,
+    "maintenance_qualified": false,
+    "outcome": "FULL_REFUND",
+    "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "refund_bps": 10000,
+    "resolution_mode": "CONSENSUS_RULING",
+    "ruling_reason": "The independent monitor reported an uptime of 96.8%, which is below the 98.00% threshold set in SLA-4 for a full refund. There were no announced maintenance windows to exclude any downtime, as confirmed by the maintenance announcements. Therefore, the downtime is not excused, and the SLA is breached, warranting a full refund.",
+    "settlement_pending": false,
+    "settlement_proposer": "0x0000000000000000000000000000000000000000",
+    "settlement_refund_bps": 0,
+    "status": "RESOLVED"
+  },
+  "read_at": "2026-07-21T16:20:00.825Z"
+}

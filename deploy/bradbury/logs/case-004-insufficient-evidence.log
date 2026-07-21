@@ -14,3 +14,7 @@ GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting tra
 GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
 [case-004-insufficient-evidence] 01-fund: node refused submission (4/6), retrying in 160s — An internal error was received.
 [case-004-insufficient-evidence] 01-fund: tx 0x678d43ffa457cc57aca2f4eeca87f8d427f46bef416a4969f628f0864d2585c8
+[case-004-insufficient-evidence] 01-fund: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-004-insufficient-evidence] state: AWAITING_PROVIDER_ACCEPTANCE
+[case-004-insufficient-evidence] 02-accept-sla: accept_sla as provider (0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc)
+[case-004-insufficient-evidence] 02-accept-sla: tx 0x5e357e736accab2f298c25b9e3549cd2a67c1eb71faff04ee5d60a1956b053fc

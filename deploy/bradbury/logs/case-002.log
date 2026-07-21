@@ -4,3 +4,11 @@
 GenLayer RPC error (eth_sendRawTransaction): server returned an error response: error code -32603: Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
 [case-002-partial-refund] 04-rule: node refused submission (1/6), retrying in 20s — An internal error was received.
 [case-002-partial-refund] 04-rule: tx 0x8f1fc2116f20cc478dc7e61e3e45657e6c7061ed1113771cab55973e38611001
+[case-002-partial-refund] 04-rule: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-002-partial-refund] state: RULED outcome=PARTIAL_REFUND
+[case-002-partial-refund] 05-release: release as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+[case-002-partial-refund] 05-release: tx 0x0644a4e4c54ecbb4688bcdd04a0c49c60e091fc9c55baa0313e9d42f17cf09ef
+[case-002-partial-refund] 05-release: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-002-partial-refund] state: RESOLVED outcome=PARTIAL_REFUND
+[case-002-partial-refund] RESOLVED via CONSENSUS_RULING — lifecycle complete.
+[case-002-partial-refund] final: {"status":"RESOLVED","outcome":"PARTIAL_REFUND","refund_bps":2500,"maintenance_qualified":false,"breached":["SLA-1"],"resolution_mode":"CONSENSUS_RULING"}

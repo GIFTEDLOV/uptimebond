@@ -1,5 +1,5 @@
 {
-  "stage": "SUBMITTED_AWAITING_RECEIPT",
+  "stage": "OBSERVED",
   "case": "case-001-no-breach",
   "step": "02-accept-sla",
   "method": "accept_sla",
@@ -9,6 +9,154 @@
   "value_wei": "0",
   "tx": "0xc51147acbd9684aec127e5210f7c2fc8d83661fb6b2defc3ede0ef261039d105",
   "explorer": "https://explorer-bradbury.genlayer.com/tx/0xc51147acbd9684aec127e5210f7c2fc8d83661fb6b2defc3ede0ef261039d105",
-  "submitted_at": "2026-07-21T16:14:29.529Z",
-  "warning": "Receipt not yet observed. Verify on-chain state before any retry."
+  "classification": {
+    "ok": true,
+    "consensus_status": "ACCEPTED",
+    "consensus_result": "AGREE",
+    "execution_result": "FINISHED_WITH_RETURN",
+    "validator_votes": [
+      "AGREE",
+      "AGREE",
+      "AGREE",
+      "AGREE",
+      "AGREE"
+    ],
+    "validator_tally": {
+      "AGREE": 5
+    },
+    "validators": [
+      "0x58a7b7ac6Cb01843e4e5af117C551E59449E0F49",
+      "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+      "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+      "0x2d012a292244C7ce6423a114d19109990923Af76",
+      "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61"
+    ],
+    "leader_index": "4"
+  },
+  "explorer_detail": {
+    "hash": "0xc51147acbd9684aec127e5210f7c2fc8d83661fb6b2defc3ede0ef261039d105",
+    "status": "accepted",
+    "execution_result": "FINISHED_WITH_RETURN",
+    "submission_timestamp": 1784650469,
+    "finalization_timestamp": 0,
+    "leader": "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61",
+    "validators": [
+      "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61",
+      "0x2d012a292244C7ce6423a114d19109990923Af76",
+      "0x58a7b7ac6Cb01843e4e5af117C551E59449E0F49",
+      "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+      "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6"
+    ],
+    "queue": {
+      "recipient": "0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC",
+      "current_queue_type": "accepted",
+      "pending_slot": 2,
+      "current_slot": null,
+      "pending_queue_count": 0,
+      "current_position": null,
+      "transactions_ahead": null,
+      "transactions_ahead_at_submission": null,
+      "queue_length_at_submission": null,
+      "created_timestamp": null,
+      "created_block": null,
+      "created_rollup_transaction_hash": null,
+      "eligible_timestamp": 1784650469,
+      "eligible_block": 15021160,
+      "eligible_rollup_transaction_hash": "0x5f1f5bf969c5bf453e9ef1e7414f715b955bf0096715689c42728735e15e0ef4",
+      "selected_activator": "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21"
+    },
+    "value": "0",
+    "from": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "to": "0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC",
+    "deployed_contract_address": null
+  },
+  "receipt": {
+    "currentTimestamp": "1784650931",
+    "sender": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "recipient": "0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC",
+    "initialRotations": "3",
+    "txSlot": "2",
+    "createdTimestamp": "1784650469",
+    "lastVoteTimestamp": "1784650901",
+    "randomSeed": "0x0dea12bcc1c8b63b07f21feab32ebd8301ee81611c908f558077c43ca525f678",
+    "result": 1,
+    "txExecutionHash": "0x7a18be18fece8d4f2a7aef39bd36a93940ce04b8d59d241707dfd1fec42c0e3c",
+    "txCalldata": "0xd5930e066d6574686f64546163636570745f736c6100",
+    "eqBlocksOutputs": "0xc786706164646564",
+    "queueType": 0,
+    "queuePosition": "0",
+    "activator": "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21",
+    "lastLeader": "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61",
+    "status": 5,
+    "txId": "0xc51147acbd9684aec127e5210f7c2fc8d83661fb6b2defc3ede0ef261039d105",
+    "readStateBlockRange": {
+      "activationBlock": "15021181",
+      "processingBlock": "15021184",
+      "proposalBlock": "15021186"
+    },
+    "numOfRounds": "0",
+    "lastRound": {
+      "round": "0",
+      "leaderIndex": "4",
+      "votesCommitted": "5",
+      "votesRevealed": "5",
+      "appealBond": "0",
+      "rotationsLeft": "3",
+      "result": 1,
+      "roundValidators": [
+        "0x58a7b7ac6Cb01843e4e5af117C551E59449E0F49",
+        "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+        "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+        "0x2d012a292244C7ce6423a114d19109990923Af76",
+        "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61"
+      ],
+      "validatorVotes": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "validatorVotesHash": [
+        "0xf974aa53cc48cb94e941ba12bdc2baa2a662a8d7826d1f1b841542f976a13292",
+        "0xe258393e2287cf6b910a6df4e04c60ec37d9e0effa94d4cc80d5c53604c94a53",
+        "0x5a85d96c3b863bafa8cbf4820c572f0d47b9fee44599f7a10e28b4dd814fc286",
+        "0x8580fc90a70053a42cb48729339764d23a3ab25e25816f7765c16c41acc46a48",
+        "0x65b243e97f2c9b60d30d9d9b5295b8ccb59b2b152d92572acdca9ccf40bd0571"
+      ],
+      "validatorResultHash": [
+        "0x413d3261df962a4e5a592574e13bdecc944e3d66dfe20b05933d7fc2a685f42d",
+        "0x413d3261df962a4e5a592574e13bdecc944e3d66dfe20b05933d7fc2a685f42d",
+        "0x413d3261df962a4e5a592574e13bdecc944e3d66dfe20b05933d7fc2a685f42d",
+        "0x413d3261df962a4e5a592574e13bdecc944e3d66dfe20b05933d7fc2a685f42d",
+        "0x413d3261df962a4e5a592574e13bdecc944e3d66dfe20b05933d7fc2a685f42d"
+      ],
+      "validatorVotesName": [
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE"
+      ]
+    },
+    "consumedValidators": [
+      "0xdB23EBD612f088Faf2e983E3E9B8724519B8D736",
+      "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+      "0x9D998aD7C7f9Cc448A4DbDf49edD7CADBe3d57B6",
+      "0x2d012a292244C7ce6423a114d19109990923Af76",
+      "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61",
+      "0x58a7b7ac6Cb01843e4e5af117C551E59449E0F49"
+    ],
+    "txExecutionResult": 1,
+    "txData": "0xd5930e066d6574686f64546163636570745f736c6100",
+    "txDataDecoded": {
+      "leaderOnly": false,
+      "type": "call"
+    },
+    "numOfInitialValidators": "3",
+    "status_name": "ACCEPTED",
+    "resultName": "AGREE",
+    "txExecutionResultName": "FINISHED_WITH_RETURN"
+  },
+  "observed_at": "2026-07-21T16:22:11.366Z"
 }

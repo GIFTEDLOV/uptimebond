@@ -20,3 +20,6 @@ GenLayer RPC error (eth_sendRawTransaction): server returned an error response: 
 [case-001-no-breach] 02-accept-sla: node refused submission (3/6), retrying in 80s — An internal error was received.
 GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
 [case-001-no-breach] 02-accept-sla: node refused submission (4/6), retrying in 160s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 02-accept-sla: node refused submission (5/6), retrying in 240s — An internal error was received.
+[case-001-no-breach] 02-accept-sla: tx 0xc51147acbd9684aec127e5210f7c2fc8d83661fb6b2defc3ede0ef261039d105
