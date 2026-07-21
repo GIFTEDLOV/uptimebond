@@ -1,0 +1,114 @@
+# ---------------------------------------------------------------- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+sdist/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ------------------------------------------------------------ Test caches ---
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.cache/
+nosetests.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+.ruff_cache/
+
+# --------------------------------------------------------------- GenLayer ---
+# gltest wipes and regenerates this on every run; never a source artifact.
+artifacts/
+.genlayer/
+
+# --------------------------------------------------------------- Node.js ----
+node_modules/
+.npm/
+.yarn/
+.pnp.*
+.yarn-integrity
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --------------------------------------------------------- Build outputs ----
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+frontend/.nuxt/
+frontend/.svelte-kit/
+frontend/.vite/
+.next/
+.turbo/
+.parcel-cache/
+*.tsbuildinfo
+
+# ------------------------------------------------- Environment & secrets ----
+# Deployment keys and RPC credentials must never be committed. Commit only
+# .env.example / .env.*.example templates with placeholder values.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.keystore
+secrets.json
+deploy/secrets/
+deploy/*.secret.json
+deploy/keystore/
+.vercel/
+
+# ------------------------------------------------------------ Claude Code ---
+# .claude/settings.json is shared project config and stays tracked; only the
+# per-developer and scratch files are ignored.
+.claude/settings.local.json
+.claude/scratchpad/
+CLAUDE.local.md
+
+# ---------------------------------------------------------------- Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# ------------------------------------------------------------------- OS -----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
