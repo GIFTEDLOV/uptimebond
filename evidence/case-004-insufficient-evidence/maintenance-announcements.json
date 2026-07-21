@@ -3,10 +3,10 @@
   "case_id": "case-004-insufficient-evidence",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T03:00:00Z",
+  "generated_at": "2026-06-01T03:00:00Z",
   "source_role": "maintenance_announcements",
   "announcement_channel": {
     "name": "Nimbus Systems Maintenance Feed",
@@ -19,7 +19,7 @@
     "retrievable": false,
     "http_equivalent_status": 403,
     "reason": "The maintenance archive for this period is served from an authentication-gated endpoint. Public retrieval returns no announcement records.",
-    "observed_at": "2026-08-01T03:00:00Z"
+    "observed_at": "2026-06-01T03:00:00Z"
   },
   "windows": null,
   "notes": "No maintenance announcement data is available to the public for this service period. This record documents that the source is inaccessible. It must not be read as a record that no maintenance occurred."

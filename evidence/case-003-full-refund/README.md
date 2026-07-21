@@ -11,8 +11,8 @@ acknowledged by the provider.
 | Provider status | 1,428 min unplanned, 0 min planned, 96.80% |
 | Maintenance feed | Reachable, **zero** windows announced |
 
-The dominant incident is `NWO-2026-07-14-01` / `NS-4612`: 23 hours 2 minutes of
-total unavailability starting 2026-07-14T02:12:00Z, caused by a correlated disk
+The dominant incident is `NWO-2026-05-14-01` / `NS-4612`: 23 hours 2 minutes of
+total unavailability starting 2026-05-14T02:12:00Z, caused by a correlated disk
 firmware fault that required restoring from off-site backup.
 
 ## Derivation

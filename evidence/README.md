@@ -20,7 +20,7 @@ evidence/
 
 All four cases describe the same fictional agreement: **Acme Labs** (customer)
 buys **NimbusAPI** from **Nimbus Systems** (provider), for the service period
-**2026-07-01T00:00:00Z – 2026-07-31T23:59:59Z**, under a locked SLA requiring
+**2026-05-01T00:00:00Z – 2026-05-31T23:59:59Z**, under a locked SLA requiring
 99.5% uptime.
 
 ## Why controlled fixtures

@@ -3,17 +3,17 @@
   "case_id": "case-001-no-breach",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-06-24T09:00:00Z",
+  "generated_at": "2026-04-24T09:00:00Z",
   "source_role": "sla_terms",
   "document": {
     "title": "NimbusAPI Service Level Agreement",
     "agreement_id": "SLA-NIMBUS-ACME-2026",
     "customer": "Acme Labs",
     "provider": "Nimbus Systems",
-    "effective_from": "2026-07-01T00:00:00Z",
+    "effective_from": "2026-05-01T00:00:00Z",
     "measurement_timezone": "UTC"
   },
   "measurement": {

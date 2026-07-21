@@ -3,10 +3,10 @@
   "case_id": "case-003-full-refund",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T02:30:00Z",
+  "generated_at": "2026-06-01T02:30:00Z",
   "source_role": "provider_status",
   "status_page": {
     "name": "Nimbus Systems Status",
@@ -24,8 +24,8 @@
   "incidents": [
     {
       "incident_id": "NS-4601",
-      "start": "2026-07-08T11:03:00Z",
-      "end": "2026-07-08T11:34:00Z",
+      "start": "2026-05-08T11:03:00Z",
+      "end": "2026-05-08T11:34:00Z",
       "downtime_minutes": 31,
       "classification": "unplanned",
       "summary": "Auth token validation timeouts.",
@@ -33,8 +33,8 @@
     },
     {
       "incident_id": "NS-4612",
-      "start": "2026-07-14T02:12:00Z",
-      "end": "2026-07-15T01:14:00Z",
+      "start": "2026-05-14T02:12:00Z",
+      "end": "2026-05-15T01:14:00Z",
       "downtime_minutes": 1382,
       "classification": "unplanned",
       "summary": "Primary storage cluster loss following a correlated disk firmware fault. Restore from off-site backup required.",
@@ -43,8 +43,8 @@
     },
     {
       "incident_id": "NS-4655",
-      "start": "2026-07-25T16:40:00Z",
-      "end": "2026-07-25T16:55:00Z",
+      "start": "2026-05-25T16:40:00Z",
+      "end": "2026-05-25T16:55:00Z",
       "downtime_minutes": 15,
       "classification": "unplanned",
       "summary": "Failed deploy rollback.",

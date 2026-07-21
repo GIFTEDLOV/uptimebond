@@ -3,10 +3,10 @@
   "case_id": "case-003-full-refund",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T03:00:00Z",
+  "generated_at": "2026-06-01T03:00:00Z",
   "source_role": "maintenance_announcements",
   "announcement_channel": {
     "name": "Nimbus Systems Maintenance Feed",

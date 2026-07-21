@@ -11,8 +11,8 @@ neither large enough to breach, and all three sources agree.
 | Provider status | 36 min unplanned, 0 min planned, 99.92% |
 | Maintenance feed | One window, announced 203 hours ahead, no impact |
 
-Downtime is two short incidents: 21 minutes on 2026-07-05 and 15 minutes on
-2026-07-22.
+Downtime is two short incidents: 21 minutes on 2026-05-05 and 15 minutes on
+2026-05-22.
 
 ## Derivation
 

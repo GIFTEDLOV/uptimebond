@@ -3,10 +3,10 @@
   "case_id": "case-004-insufficient-evidence",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T00:10:00Z",
+  "generated_at": "2026-06-01T00:10:00Z",
   "source_role": "independent_monitor",
   "monitor": {
     "name": "Northwind Uptime Observatory",
@@ -28,15 +28,15 @@
     "data_gaps": [
       {
         "gap_id": "NWO-GAP-01",
-        "start": "2026-07-09T00:00:00Z",
-        "end": "2026-07-16T00:00:00Z",
+        "start": "2026-05-09T00:00:00Z",
+        "end": "2026-05-16T00:00:00Z",
         "missing_minutes": 10080,
         "reason": "Probe fleet migration. Telemetry for this interval was not retained and cannot be reconstructed."
       },
       {
         "gap_id": "NWO-GAP-02",
-        "start": "2026-07-24T12:00:00Z",
-        "end": "2026-07-29T09:31:00Z",
+        "start": "2026-05-24T12:00:00Z",
+        "end": "2026-05-29T09:31:00Z",
         "missing_minutes": 7051,
         "reason": "Collector outage at the monitoring provider; no data was written."
       }
@@ -50,18 +50,18 @@
   },
   "incidents": [
     {
-      "incident_id": "NWO-2026-07-03-01",
-      "start": "2026-07-03T08:20:00Z",
-      "end": "2026-07-03T08:44:00Z",
+      "incident_id": "NWO-2026-05-03-01",
+      "start": "2026-05-03T08:20:00Z",
+      "end": "2026-05-03T08:44:00Z",
       "downtime_minutes": 24,
       "summary": "Service unavailable from all probe regions.",
       "inside_announced_maintenance_window": false,
       "provider_claims_scheduled_maintenance": false
     },
     {
-      "incident_id": "NWO-2026-07-21-01",
-      "start": "2026-07-21T22:05:00Z",
-      "end": "2026-07-21T22:25:00Z",
+      "incident_id": "NWO-2026-05-21-01",
+      "start": "2026-05-21T22:05:00Z",
+      "end": "2026-05-21T22:25:00Z",
       "downtime_minutes": 20,
       "summary": "Elevated error rate exceeding the failure threshold.",
       "inside_announced_maintenance_window": false,

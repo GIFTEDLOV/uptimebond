@@ -10,7 +10,7 @@ whether that announcement was timely.
 |---|---|
 | Independent monitor | 100% coverage, 402 min downtime, **99.10%** uptime |
 | Provider status | 102 min unplanned + 300 min *planned*, headline **99.77%** |
-| Maintenance feed | Window `NS-MW-2026-07-12`, announced **2.0 hours** ahead |
+| Maintenance feed | Window `NS-MW-2026-05-12`, announced **2.0 hours** ahead |
 
 The two headline percentages disagree because they count the same 300 minutes
 differently — not because the underlying observations differ. Both sources agree
@@ -22,8 +22,8 @@ SLA-2 excludes maintenance downtime **only** when the window was announced at
 least 24 hours before it began.
 
 ```
-announced_at  = 2026-07-12T03:00:00Z
-window_start  = 2026-07-12T05:00:00Z
+announced_at  = 2026-05-12T03:00:00Z
+window_start  = 2026-05-12T05:00:00Z
 lead time     = 2.0 hours   <   24 hours  ->  does not qualify
 ```
 

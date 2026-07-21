@@ -3,10 +3,10 @@
   "case_id": "case-001-no-breach",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T00:10:00Z",
+  "generated_at": "2026-06-01T00:10:00Z",
   "source_role": "independent_monitor",
   "monitor": {
     "name": "Northwind Uptime Observatory",
@@ -33,23 +33,23 @@
   },
   "incidents": [
     {
-      "incident_id": "NWO-2026-07-05-01",
-      "start": "2026-07-05T03:14:00Z",
-      "end": "2026-07-05T03:35:00Z",
+      "incident_id": "NWO-2026-05-05-01",
+      "start": "2026-05-05T03:14:00Z",
+      "end": "2026-05-05T03:35:00Z",
       "downtime_minutes": 21,
       "summary": "Elevated 5xx responses on /v1/query from all probe regions.",
       "inside_announced_maintenance_window": false,
       "provider_claims_scheduled_maintenance": false
     },
     {
-      "incident_id": "NWO-2026-07-22-01",
-      "start": "2026-07-22T18:02:00Z",
-      "end": "2026-07-22T18:17:00Z",
+      "incident_id": "NWO-2026-05-22-01",
+      "start": "2026-05-22T18:02:00Z",
+      "end": "2026-05-22T18:17:00Z",
       "downtime_minutes": 15,
       "summary": "TLS handshake failures at the edge tier.",
       "inside_announced_maintenance_window": false,
       "provider_claims_scheduled_maintenance": false
     }
   ],
-  "notes": "Full-period coverage with no collection gaps. The maintenance window of 2026-07-19T01:00:00Z produced no probe failures and contributed no downtime."
+  "notes": "Full-period coverage with no collection gaps. The maintenance window of 2026-05-19T01:00:00Z produced no probe failures and contributed no downtime."
 }

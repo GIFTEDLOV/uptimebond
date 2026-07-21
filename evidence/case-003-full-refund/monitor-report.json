@@ -3,10 +3,10 @@
   "case_id": "case-003-full-refund",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T00:10:00Z",
+  "generated_at": "2026-06-01T00:10:00Z",
   "source_role": "independent_monitor",
   "monitor": {
     "name": "Northwind Uptime Observatory",
@@ -33,27 +33,27 @@
   },
   "incidents": [
     {
-      "incident_id": "NWO-2026-07-08-01",
-      "start": "2026-07-08T11:03:00Z",
-      "end": "2026-07-08T11:34:00Z",
+      "incident_id": "NWO-2026-05-08-01",
+      "start": "2026-05-08T11:03:00Z",
+      "end": "2026-05-08T11:34:00Z",
       "downtime_minutes": 31,
       "summary": "Authentication service timeouts across all regions.",
       "inside_announced_maintenance_window": false,
       "provider_claims_scheduled_maintenance": false
     },
     {
-      "incident_id": "NWO-2026-07-14-01",
-      "start": "2026-07-14T02:12:00Z",
-      "end": "2026-07-15T01:14:00Z",
+      "incident_id": "NWO-2026-05-14-01",
+      "start": "2026-05-14T02:12:00Z",
+      "end": "2026-05-15T01:14:00Z",
       "downtime_minutes": 1382,
       "summary": "Total service outage lasting 23 hours 2 minutes. No probe region returned a healthy response for the duration.",
       "inside_announced_maintenance_window": false,
       "provider_claims_scheduled_maintenance": false
     },
     {
-      "incident_id": "NWO-2026-07-25-01",
-      "start": "2026-07-25T16:40:00Z",
-      "end": "2026-07-25T16:55:00Z",
+      "incident_id": "NWO-2026-05-25-01",
+      "start": "2026-05-25T16:40:00Z",
+      "end": "2026-05-25T16:55:00Z",
       "downtime_minutes": 15,
       "summary": "Partial 503 responses during a failed deploy rollback.",
       "inside_announced_maintenance_window": false,

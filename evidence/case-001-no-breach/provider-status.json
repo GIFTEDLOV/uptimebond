@@ -3,10 +3,10 @@
   "case_id": "case-001-no-breach",
   "service_name": "NimbusAPI",
   "service_period": {
-    "start": "2026-07-01T00:00:00Z",
-    "end": "2026-07-31T23:59:59Z"
+    "start": "2026-05-01T00:00:00Z",
+    "end": "2026-05-31T23:59:59Z"
   },
-  "generated_at": "2026-08-01T02:30:00Z",
+  "generated_at": "2026-06-01T02:30:00Z",
   "source_role": "provider_status",
   "status_page": {
     "name": "Nimbus Systems Status",
@@ -24,8 +24,8 @@
   "incidents": [
     {
       "incident_id": "NS-4417",
-      "start": "2026-07-05T03:14:00Z",
-      "end": "2026-07-05T03:35:00Z",
+      "start": "2026-05-05T03:14:00Z",
+      "end": "2026-05-05T03:35:00Z",
       "downtime_minutes": 21,
       "classification": "unplanned",
       "summary": "Query service degradation following a bad cache rollout.",
@@ -33,8 +33,8 @@
     },
     {
       "incident_id": "NS-4462",
-      "start": "2026-07-22T18:02:00Z",
-      "end": "2026-07-22T18:17:00Z",
+      "start": "2026-05-22T18:02:00Z",
+      "end": "2026-05-22T18:17:00Z",
       "downtime_minutes": 15,
       "classification": "unplanned",
       "summary": "Expired intermediate certificate on two edge nodes.",
