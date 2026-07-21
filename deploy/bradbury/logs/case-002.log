@@ -1,0 +1,6 @@
+[case-002-partial-refund] state: DISPUTED
+[case-002-partial-refund] rule: this is the real validator adjudication — evidence is re-fetched by every validator
+[case-002-partial-refund] 04-rule: rule as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+GenLayer RPC error (eth_sendRawTransaction): server returned an error response: error code -32603: Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-002-partial-refund] 04-rule: node refused submission (1/6), retrying in 20s — An internal error was received.
+[case-002-partial-refund] 04-rule: tx 0x8f1fc2116f20cc478dc7e61e3e45657e6c7061ed1113771cab55973e38611001

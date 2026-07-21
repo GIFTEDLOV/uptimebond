@@ -1,0 +1,22 @@
+[case-001-no-breach] deploy: evidence preflight OK (all four sources reachable)
+[case-001-no-breach] deploy: 30157 bytes as deployer
+[case-001-no-breach] deploy: tx 0xfbbf49f861cb561d9248f99cc25a4cd754a40d9fdaab878d1c1efea71c1002dc
+[case-001-no-breach] deploy: contract 0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC
+[case-001-no-breach] state: AWAITING_FUNDING
+[case-001-no-breach] 01-fund: fund as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) value=100000000000000000
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 01-fund: node refused submission (1/6), retrying in 20s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 01-fund: node refused submission (2/6), retrying in 40s — An internal error was received.
+[case-001-no-breach] 01-fund: tx 0x9b513a792720678f23f0893d75d98747e856364aa8748d2adfc9ac00433fdc83
+[case-001-no-breach] 01-fund: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-001-no-breach] state: AWAITING_PROVIDER_ACCEPTANCE
+[case-001-no-breach] 02-accept-sla: accept_sla as provider (0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc)
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 02-accept-sla: node refused submission (1/6), retrying in 20s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): server returned an error response: error code -32603: Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 02-accept-sla: node refused submission (2/6), retrying in 40s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): server returned an error response: error code -32603: Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 02-accept-sla: node refused submission (3/6), retrying in 80s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-001-no-breach] 02-accept-sla: node refused submission (4/6), retrying in 160s — An internal error was received.

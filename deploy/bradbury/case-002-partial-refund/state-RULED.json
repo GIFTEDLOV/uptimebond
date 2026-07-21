@@ -1,0 +1,25 @@
+{
+  "case": "case-002-partial-refund",
+  "contract": "0x4dc6b188b3025f92F133515c3041cbc4E2019988",
+  "state": {
+    "breached_clause_ids": [
+      "SLA-1"
+    ],
+    "customer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "dispute_opened_at": 1784648505,
+    "escrow_atto": "1000000000000000000",
+    "incident_window": "NimbusAPI May 2026 uptime and maintenance-notice dispute",
+    "insufficient_evidence_ruled_at": 0,
+    "maintenance_qualified": false,
+    "outcome": "PARTIAL_REFUND",
+    "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "refund_bps": 2500,
+    "resolution_mode": "",
+    "ruling_reason": "The independent monitor is the primary evidence and reports an uptime of 99.1%, which is below the 99.5% SLA commitment. The 300-minute maintenance window on May 12 does not qualify for exclusion as it was announced only 2 hours in advance, failing the 24-hour notice requirement in SLA-2. Therefore, all 402 minutes of downtime count, resulting in a breach that falls within the 98.00% to 99.49% range for a partial refund per SLA-3.",
+    "settlement_pending": false,
+    "settlement_proposer": "0x0000000000000000000000000000000000000000",
+    "settlement_refund_bps": 0,
+    "status": "RULED"
+  },
+  "read_at": "2026-07-21T16:14:53.555Z"
+}

@@ -1,0 +1,14 @@
+{
+  "stage": "SUBMITTED_AWAITING_RECEIPT",
+  "case": "case-002-partial-refund",
+  "step": "05-release",
+  "method": "release",
+  "contract": "0x4dc6b188b3025f92F133515c3041cbc4E2019988",
+  "signer_account": "deployer",
+  "signer_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "value_wei": "0",
+  "tx": "0x0644a4e4c54ecbb4688bcdd04a0c49c60e091fc9c55baa0313e9d42f17cf09ef",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0x0644a4e4c54ecbb4688bcdd04a0c49c60e091fc9c55baa0313e9d42f17cf09ef",
+  "submitted_at": "2026-07-21T16:14:55.451Z",
+  "warning": "Receipt not yet observed. Verify on-chain state before any retry."
+}

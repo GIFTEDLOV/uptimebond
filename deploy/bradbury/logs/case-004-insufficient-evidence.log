@@ -1,0 +1,16 @@
+[case-004-insufficient-evidence] deploy: evidence preflight OK (all four sources reachable)
+[case-004-insufficient-evidence] deploy: 30157 bytes as deployer
+[case-004-insufficient-evidence] deploy: tx 0xfe082e17e93464edc01427df22b97e07ea639246b99e6ab5f906b3f44433df0e
+[case-004-insufficient-evidence] deploy: pending (120s)
+[case-004-insufficient-evidence] deploy: contract 0xb0C263bEf959E640060045D47659582D23bb67c0
+[case-004-insufficient-evidence] state: AWAITING_FUNDING
+[case-004-insufficient-evidence] 01-fund: fund as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) value=100000000000000000
+GenLayer RPC error (eth_sendRawTransaction): server returned an error response: error code -32603: Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-004-insufficient-evidence] 01-fund: node refused submission (1/6), retrying in 20s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-004-insufficient-evidence] 01-fund: node refused submission (2/6), retrying in 40s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-004-insufficient-evidence] 01-fund: node refused submission (3/6), retrying in 80s — An internal error was received.
+GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
+[case-004-insufficient-evidence] 01-fund: node refused submission (4/6), retrying in 160s — An internal error was received.
+[case-004-insufficient-evidence] 01-fund: tx 0x678d43ffa457cc57aca2f4eeca87f8d427f46bef416a4969f628f0864d2585c8

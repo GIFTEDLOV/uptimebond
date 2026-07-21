@@ -1,0 +1,14 @@
+{
+  "stage": "SUBMITTED_AWAITING_RECEIPT",
+  "case": "case-004-insufficient-evidence",
+  "step": "02-accept-sla",
+  "method": "accept_sla",
+  "contract": "0xb0C263bEf959E640060045D47659582D23bb67c0",
+  "signer_account": "provider",
+  "signer_address": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+  "value_wei": "0",
+  "tx": "0x5e357e736accab2f298c25b9e3549cd2a67c1eb71faff04ee5d60a1956b053fc",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0x5e357e736accab2f298c25b9e3549cd2a67c1eb71faff04ee5d60a1956b053fc",
+  "submitted_at": "2026-07-21T16:14:55.156Z",
+  "warning": "Receipt not yet observed. Verify on-chain state before any retry."
+}
