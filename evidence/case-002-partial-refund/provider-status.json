@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-002-partial-refund",
+  "service_name": "NimbusAPI",
+  "service_period": {
+    "start": "2026-07-01T00:00:00Z",
+    "end": "2026-07-31T23:59:59Z"
+  },
+  "generated_at": "2026-08-01T02:30:00Z",
+  "source_role": "provider_status",
+  "status_page": {
+    "name": "Nimbus Systems Status",
+    "publisher": "Nimbus Systems",
+    "self_reported": true,
+    "independent_of_provider": false
+  },
+  "reported": {
+    "period_minutes": 44640,
+    "unplanned_downtime_minutes": 102,
+    "planned_downtime_minutes": 300,
+    "uptime_percent": 99.77,
+    "uptime_percent_basis": "Excludes the 2026-07-12 maintenance window, which Nimbus Systems classifies as planned.",
+    "measurement_complete": true
+  },
+  "incidents": [
+    {
+      "incident_id": "NS-4530",
+      "start": "2026-07-12T05:00:00Z",
+      "end": "2026-07-12T10:00:00Z",
+      "downtime_minutes": 300,
+      "classification": "planned",
+      "summary": "Emergency storage migration, executed as a maintenance window.",
+      "announcement_reference": "NS-MW-2026-07-12",
+      "postmortem_published": false
+    },
+    {
+      "incident_id": "NS-4544",
+      "start": "2026-07-20T09:11:00Z",
+      "end": "2026-07-20T10:09:00Z",
+      "downtime_minutes": 58,
+      "classification": "unplanned",
+      "summary": "Connection pool exhaustion on the write path.",
+      "postmortem_published": true
+    },
+    {
+      "incident_id": "NS-4571",
+      "start": "2026-07-27T21:30:00Z",
+      "end": "2026-07-27T22:14:00Z",
+      "downtime_minutes": 44,
+      "classification": "unplanned",
+      "summary": "Load balancer failover loop in eu-west-1.",
+      "postmortem_published": true
+    }
+  ],
+  "notes": "Nimbus Systems reports uptime excluding planned maintenance. The classification of the 2026-07-12 window as planned is a provider designation, not an independent determination."
+}

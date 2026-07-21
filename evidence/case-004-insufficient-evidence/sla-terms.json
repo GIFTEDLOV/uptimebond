@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-004-insufficient-evidence",
+  "service_name": "NimbusAPI",
+  "service_period": {
+    "start": "2026-07-01T00:00:00Z",
+    "end": "2026-07-31T23:59:59Z"
+  },
+  "generated_at": "2026-06-24T09:00:00Z",
+  "source_role": "sla_terms",
+  "document": {
+    "title": "NimbusAPI Service Level Agreement",
+    "agreement_id": "SLA-NIMBUS-ACME-2026",
+    "customer": "Acme Labs",
+    "provider": "Nimbus Systems",
+    "effective_from": "2026-07-01T00:00:00Z",
+    "measurement_timezone": "UTC"
+  },
+  "measurement": {
+    "metric": "monthly_uptime_percent",
+    "formula": "(period_minutes - counted_downtime_minutes) / period_minutes * 100",
+    "period_minutes": 44640,
+    "rounding": "half_up_to_two_decimal_places",
+    "authoritative_source": "independent_monitor"
+  },
+  "clauses": [
+    {
+      "id": "SLA-1",
+      "title": "Uptime commitment",
+      "text": "Nimbus Systems shall maintain NimbusAPI availability of at least 99.50% of the service period, measured by the independent monitor.",
+      "threshold_percent": 99.5
+    },
+    {
+      "id": "SLA-2",
+      "title": "Scheduled maintenance exclusion",
+      "text": "Downtime occurring inside a scheduled maintenance window is excluded from the uptime calculation only if that window was publicly announced at least 24 hours before it began. A window announced less than 24 hours in advance does not qualify for exclusion and its downtime counts in full.",
+      "notice_requirement_hours": 24
+    },
+    {
+      "id": "SLA-3",
+      "title": "Partial service credit",
+      "text": "Measured uptime from 98.00% through 99.49% inclusive entitles Acme Labs to a refund of 25% of the amount held in escrow.",
+      "range": {
+        "min_percent": 98.0,
+        "max_percent": 99.49
+      },
+      "customer_refund_percent": 25
+    },
+    {
+      "id": "SLA-4",
+      "title": "Full service credit",
+      "text": "Measured uptime below 98.00% entitles Acme Labs to a refund of 100% of the amount held in escrow.",
+      "range": {
+        "max_percent_exclusive": 98.0
+      },
+      "customer_refund_percent": 100
+    },
+    {
+      "id": "SLA-5",
+      "title": "No credit at or above commitment",
+      "text": "Measured uptime at or above 99.50% entitles Acme Labs to no refund.",
+      "range": {
+        "min_percent": 99.5
+      },
+      "customer_refund_percent": 0
+    },
+    {
+      "id": "SLA-6",
+      "title": "Evidence hierarchy and insufficiency",
+      "text": "The independent monitor is primary evidence. The provider status page and the maintenance announcement feed are corroborating evidence only and cannot by themselves establish measured uptime. Where material evidence is unavailable, inaccessible, or irreconcilably contradictory, no financial ruling may be derived from this agreement."
+    }
+  ],
+  "evidence_sources": {
+    "primary": [
+      "independent_monitor"
+    ],
+    "corroborating": [
+      "provider_status",
+      "maintenance_announcements"
+    ]
+  }
+}

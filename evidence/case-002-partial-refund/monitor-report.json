@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-002-partial-refund",
+  "service_name": "NimbusAPI",
+  "service_period": {
+    "start": "2026-07-01T00:00:00Z",
+    "end": "2026-07-31T23:59:59Z"
+  },
+  "generated_at": "2026-08-01T00:10:00Z",
+  "source_role": "independent_monitor",
+  "monitor": {
+    "name": "Northwind Uptime Observatory",
+    "operator": "Northwind Metrics Ltd.",
+    "independent_of_provider": true,
+    "check_interval_seconds": 60,
+    "probe_regions": [
+      "eu-west-1",
+      "us-east-1",
+      "ap-southeast-1"
+    ],
+    "downtime_rule": "A minute is recorded as down when the health probe fails from a majority of probe regions within that minute."
+  },
+  "measurement": {
+    "period_minutes": 44640,
+    "observed_minutes": 44640,
+    "coverage_percent": 100.0,
+    "measurement_complete": true,
+    "data_gaps": [],
+    "counted_downtime_minutes": 402,
+    "uptime_percent": 99.1,
+    "uptime_percent_unrounded": 99.099462,
+    "period_uptime_derivable": true,
+    "counted_downtime_minutes_note": "All observed downtime is counted here, including the interval the provider designates as scheduled maintenance. The monitor does not apply the exclusion test in SLA-2.",
+    "downtime_minutes_if_provider_maintenance_excluded": 102,
+    "uptime_percent_if_provider_maintenance_excluded": 99.77
+  },
+  "incidents": [
+    {
+      "incident_id": "NWO-2026-07-12-01",
+      "start": "2026-07-12T05:00:00Z",
+      "end": "2026-07-12T10:00:00Z",
+      "downtime_minutes": 300,
+      "summary": "Sustained total unavailability across all probe regions. The provider designates this interval as scheduled maintenance.",
+      "inside_announced_maintenance_window": true,
+      "provider_claims_scheduled_maintenance": true,
+      "announcement_observed_at": "2026-07-12T03:00:00Z",
+      "announcement_lead_time_hours": 2.0
+    },
+    {
+      "incident_id": "NWO-2026-07-20-01",
+      "start": "2026-07-20T09:11:00Z",
+      "end": "2026-07-20T10:09:00Z",
+      "downtime_minutes": 58,
+      "summary": "Write path unavailable; connection pool exhaustion.",
+      "inside_announced_maintenance_window": false,
+      "provider_claims_scheduled_maintenance": false
+    },
+    {
+      "incident_id": "NWO-2026-07-27-01",
+      "start": "2026-07-27T21:30:00Z",
+      "end": "2026-07-27T22:14:00Z",
+      "downtime_minutes": 44,
+      "summary": "Regional load balancer failover loop.",
+      "inside_announced_maintenance_window": false,
+      "provider_claims_scheduled_maintenance": false
+    }
+  ],
+  "notes": "Full-period coverage with no collection gaps. The 2026-07-12 interval was announced 2 hours before it began, per the observed announcement timestamp."
+}

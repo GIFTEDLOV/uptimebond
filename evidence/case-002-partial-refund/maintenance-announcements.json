@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-002-partial-refund",
+  "service_name": "NimbusAPI",
+  "service_period": {
+    "start": "2026-07-01T00:00:00Z",
+    "end": "2026-07-31T23:59:59Z"
+  },
+  "generated_at": "2026-08-01T03:00:00Z",
+  "source_role": "maintenance_announcements",
+  "announcement_channel": {
+    "name": "Nimbus Systems Maintenance Feed",
+    "publisher": "Nimbus Systems",
+    "public": true,
+    "archive_url_note": "Announcements are published to the public maintenance feed and retained for 24 months."
+  },
+  "windows": [
+    {
+      "window_id": "NS-MW-2026-07-12",
+      "announced_at": "2026-07-12T03:00:00Z",
+      "window_start": "2026-07-12T05:00:00Z",
+      "window_end": "2026-07-12T10:00:00Z",
+      "notice_lead_time_hours": 2.0,
+      "scope": "Emergency storage migration.",
+      "expected_customer_impact": "Full API unavailability for the duration.",
+      "announcement_channel_note": "Published to the public maintenance feed at the timestamp above."
+    }
+  ],
+  "notes": "One maintenance window was announced during the service period. The lead time recorded above is the interval between announcement and window start."
+}
