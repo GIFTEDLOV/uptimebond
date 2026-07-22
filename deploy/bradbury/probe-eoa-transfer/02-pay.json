@@ -1,0 +1,134 @@
+{
+  "action": "write",
+  "method": "pay",
+  "contract": "0x743D6AcC9b72C98e5C9E51A49e4A2C9CdbD03D18",
+  "signer_account": "deployer",
+  "signer_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "value_wei": "0",
+  "tx": "0xfce0c51a17c482b18c742d6f284aa0661cc03f97be70fef646fd1413faaa679e",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0xfce0c51a17c482b18c742d6f284aa0661cc03f97be70fef646fd1413faaa679e",
+  "classification": {
+    "ok": true,
+    "consensus_status": "ACCEPTED",
+    "consensus_result": "AGREE",
+    "execution_result": "FINISHED_WITH_RETURN",
+    "validator_votes": [
+      "AGREE",
+      "AGREE",
+      "AGREE",
+      "AGREE",
+      "AGREE"
+    ],
+    "validator_tally": {
+      "AGREE": 5
+    },
+    "validators": [
+      "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+      "0x3E1E6060f746c78DB2BE0909C30A1f6A41AcD011",
+      "0xC32bD21E1506Ab4954BA1EE8FBD50271Ca61b7DE",
+      "0x2d012a292244C7ce6423a114d19109990923Af76",
+      "0xE8fdefdfe18fD8E5B0d576b7CcfC5a29CE43fD7f"
+    ],
+    "leader_index": "2",
+    "votes_committed": "5",
+    "votes_revealed": "5"
+  },
+  "submitted_at": "2026-07-21T22:03:50.687Z",
+  "receipt": {
+    "currentTimestamp": "1784671430",
+    "sender": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "recipient": "0x743D6AcC9b72C98e5C9E51A49e4A2C9CdbD03D18",
+    "initialRotations": "3",
+    "txSlot": "2",
+    "createdTimestamp": "1784671422",
+    "lastVoteTimestamp": "1784671428",
+    "randomSeed": "0x4f88e9f28064a46f5a25d6c1f860b0eece5654cd9a3340d011c08d9a5d163164",
+    "result": 1,
+    "txExecutionHash": "0x66d32b427f82f68136c8bbed87f2a610cb8896aff4b0d6411b151c648894c1b2",
+    "txCalldata": "0xdc9a1604617267730d8180c0c6c9faeb38066d6574686f641c70617900",
+    "eqBlocksOutputs": "0xc786706164646564",
+    "messages": [
+      {
+        "messageType": 0,
+        "recipient": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+        "value": "4000000000000000",
+        "data": "0x",
+        "onAcceptance": false,
+        "saltNonce": "0"
+      }
+    ],
+    "queueType": 0,
+    "queuePosition": "0",
+    "activator": "0x7c23E70217AB2A9E777940Eb769bA4198d1BaA61",
+    "lastLeader": "0xC32bD21E1506Ab4954BA1EE8FBD50271Ca61b7DE",
+    "status": 5,
+    "txId": "0xfce0c51a17c482b18c742d6f284aa0661cc03f97be70fef646fd1413faaa679e",
+    "readStateBlockRange": {
+      "activationBlock": "15088890",
+      "processingBlock": "15088891",
+      "proposalBlock": "15088893"
+    },
+    "numOfRounds": "0",
+    "lastRound": {
+      "round": "0",
+      "leaderIndex": "2",
+      "votesCommitted": "5",
+      "votesRevealed": "5",
+      "appealBond": "0",
+      "rotationsLeft": "3",
+      "result": 1,
+      "roundValidators": [
+        "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+        "0x3E1E6060f746c78DB2BE0909C30A1f6A41AcD011",
+        "0xC32bD21E1506Ab4954BA1EE8FBD50271Ca61b7DE",
+        "0x2d012a292244C7ce6423a114d19109990923Af76",
+        "0xE8fdefdfe18fD8E5B0d576b7CcfC5a29CE43fD7f"
+      ],
+      "validatorVotes": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "validatorVotesHash": [
+        "0x612072e93296249f702b87c27c90fb673a0553da27056585b9712f6f891d0df7",
+        "0x65653f8ad98a144dcd44a71004c424a7ff0c4f68f47ac59e61c3dc8e570b4676",
+        "0xa2785cece8a9f48664495f5365fa5a341071bf84c57c7ba00c6293e46fe930cd",
+        "0x0640efa93a1716043f44690b6564f316f670bf29c0a4e0894046738219287b78",
+        "0x30811f42d747d1dcc03c986aee2819940015290808f8396ed7a251bb65ea63e7"
+      ],
+      "validatorResultHash": [
+        "0xf338eff509304511d6ae72ec9fb77c0d1438ae7183427b09d842465791a1c5f8",
+        "0xf338eff509304511d6ae72ec9fb77c0d1438ae7183427b09d842465791a1c5f8",
+        "0xf338eff509304511d6ae72ec9fb77c0d1438ae7183427b09d842465791a1c5f8",
+        "0xf338eff509304511d6ae72ec9fb77c0d1438ae7183427b09d842465791a1c5f8",
+        "0xf338eff509304511d6ae72ec9fb77c0d1438ae7183427b09d842465791a1c5f8"
+      ],
+      "validatorVotesName": [
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE"
+      ]
+    },
+    "consumedValidators": [
+      "0x59dC5E6fD7428c5Ee6fc24aE2B99E5860A9c9499",
+      "0x3E1E6060f746c78DB2BE0909C30A1f6A41AcD011",
+      "0xC32bD21E1506Ab4954BA1EE8FBD50271Ca61b7DE",
+      "0x2d012a292244C7ce6423a114d19109990923Af76",
+      "0xE8fdefdfe18fD8E5B0d576b7CcfC5a29CE43fD7f"
+    ],
+    "txExecutionResult": 1,
+    "txData": "0xdc9a1604617267730d8180c0c6c9faeb38066d6574686f641c70617900",
+    "txDataDecoded": {
+      "leaderOnly": false,
+      "type": "call"
+    },
+    "numOfInitialValidators": "3",
+    "status_name": "ACCEPTED",
+    "resultName": "AGREE",
+    "txExecutionResultName": "FINISHED_WITH_RETURN"
+  }
+}

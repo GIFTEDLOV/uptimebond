@@ -55,6 +55,24 @@ export interface AgreementState {
   settlement_refund_bps: number;
 }
 
+/** Settlement facts derived from the contract's live native balance.
+ *
+ * `status === 'RESOLVED'` means the payout was *queued*, not that anyone was
+ * paid: settlement transfers are EVM external messages that execute at
+ * finalization, tens of minutes later. Never report completed payment from
+ * status or arithmetic — read `payout_complete`, which is derived from the
+ * balance actually leaving the contract.
+ */
+export interface SettlementStatus {
+  status: string;
+  settlement_queued: boolean;
+  payout_complete: boolean;
+  contract_balance_atto: string;
+  escrow_atto: string;
+  expected_customer_atto: string;
+  expected_provider_atto: string;
+}
+
 export interface DeadlockStatus {
   status: string;
   now: number;
@@ -98,6 +116,16 @@ export async function readDeadlock(address: string): Promise<DeadlockStatus> {
     args: [],
     jsonSafeReturn: true,
   })) as unknown as DeadlockStatus;
+}
+
+export async function readSettlement(address: string): Promise<SettlementStatus> {
+  const c = readClient();
+  return (await c.readContract({
+    address: address as `0x${string}`,
+    functionName: 'get_settlement_status',
+    args: [],
+    jsonSafeReturn: true,
+  })) as unknown as SettlementStatus;
 }
 
 export async function readEvidenceSources(address: string) {

@@ -1,0 +1,26 @@
+{
+  "diff": {
+    "from": "03-after-pay-accepted",
+    "to": "04-after-pay-finalized"
+  },
+  "rows": {
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
+      "before_wei": "20499994331929304844",
+      "after_wei": "20499994331929304844",
+      "delta_wei": "0",
+      "delta_gen": "0.000000000000000000"
+    },
+    "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc": {
+      "before_wei": "1999560430653096050",
+      "after_wei": "2003560430653096050",
+      "delta_wei": "4000000000000000",
+      "delta_gen": "0.004000000000000000"
+    },
+    "0x743D6AcC9b72C98e5C9E51A49e4A2C9CdbD03D18": {
+      "before_wei": "10000000000000000",
+      "after_wei": "6000000000000000",
+      "delta_wei": "-4000000000000000",
+      "delta_gen": "-0.004000000000000000"
+    }
+  }
+}

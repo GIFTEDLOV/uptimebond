@@ -11,6 +11,7 @@ from conftest import (
     MAINT_URL,
     MONITOR_URL,
     ONE_ETH,
+    evm_payout,
     SLA_TERMS_URL,
     STATUS_URL,
     to_hex,
@@ -188,7 +189,7 @@ def test_cancel_before_acceptance_refunds_customer_in_full(
 
     # Whole escrow to the customer, nothing to the provider.
     assert transfers == [
-        {"to": to_hex(direct_alice), "value": ONE_ETH, "on": "finalized"}
+        evm_payout(direct_alice, ONE_ETH)
     ]
 
 
@@ -232,7 +233,7 @@ def test_approve_service_pays_provider_in_full(active, direct_vm, direct_alice, 
     assert state["outcome"] == "NO_BREACH"
     assert state["refund_bps"] == 0
 
-    assert transfers == [{"to": to_hex(direct_bob), "value": ONE_ETH, "on": "finalized"}]
+    assert transfers == [evm_payout(direct_bob, ONE_ETH)]
 
 
 def test_only_customer_may_approve_service(active, direct_vm, direct_bob, direct_charlie):

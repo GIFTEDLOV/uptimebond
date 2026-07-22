@@ -1,8 +1,8 @@
 """Escrow settlement: consensus release, the mutual fallback, and accounting.
 
 Every settlement path funnels through ``_settle``, so the invariants asserted
-here — exact split, no leakage, ``on="finalized"``, single payout — are the
-ones that keep custody honest.
+here — exact split, no leakage, EVM external payout channel, queued-not-paid
+until finalization, single payout — are the ones that keep custody honest.
 """
 
 import json
@@ -10,8 +10,14 @@ import json
 import pytest
 
 from conftest import (
+    CHANNEL_EVM_EXTERNAL,
+    CONTRACT_PATH,
+    CHANNEL_INTERNAL_IC,
     INCIDENT,
     ONE_ETH,
+    apply_finalization,
+    contract_address_of,
+    evm_payout,
     mock_all_sources,
     mock_raw_ruling,
     mock_ruling,
@@ -58,24 +64,128 @@ def test_release_splits_escrow_per_the_ruling(
 
     expected = []
     if customer_share:
-        expected.append({"to": to_hex(direct_alice), "value": customer_share, "on": "finalized"})
+        expected.append(evm_payout(direct_alice, customer_share))
     if provider_share:
-        expected.append({"to": to_hex(direct_bob), "value": provider_share, "on": "finalized"})
+        expected.append(evm_payout(direct_bob, provider_share))
     assert transfers == expected
 
     # Nothing is minted and nothing is stranded.
     assert sum(t["value"] for t in transfers) == ONE_ETH
 
 
-def test_settlement_transfers_are_finalized_only(ruled, direct_vm, direct_alice, transfers):
+def test_settlement_transfers_use_the_evm_external_channel(
+    ruled, direct_vm, direct_alice, transfers
+):
+    """Both payouts must leave through EthSend, not an internal IC message.
+
+    This is the regression that stranded four live agreements. The recipients
+    are EOAs; an internal `PostMessage` aimed at an EOA neither reverts nor
+    transfers, so every other assertion in this file passed while the escrow
+    never moved. Only the channel distinguishes the two.
+    """
     contract = ruled("PARTIAL_REFUND")
 
     direct_vm.sender = direct_alice
     contract.release()
 
-    # Funds must never move before the accepted decision is final, which is
-    # what makes the native appeal path safe.
-    assert transfers and all(t["on"] == "finalized" for t in transfers)
+    assert len(transfers) == 2
+    assert all(t["channel"] == CHANNEL_EVM_EXTERNAL for t in transfers)
+    assert not any(t["channel"] == CHANNEL_INTERNAL_IC for t in transfers)
+    # Bare value transfer — no method is being called on the recipient.
+    assert all(t["calldata"] == b"" for t in transfers)
+
+
+@pytest.mark.parametrize(
+    "outcome,expected_recipients",
+    [
+        ("NO_BREACH", ["provider"]),
+        ("PARTIAL_REFUND", ["customer", "provider"]),
+        ("FULL_REFUND", ["customer"]),
+    ],
+)
+def test_zero_value_branches_emit_no_transfer(
+    ruled, direct_vm, direct_alice, direct_bob, transfers, outcome, expected_recipients
+):
+    """A zero share must produce no message at all, not a zero-value one.
+
+    The EVM proxy rejects a zero-value transfer, so emitting one would revert
+    the whole settlement. The guards in `_settle` are what keep a 0%/100% split
+    releasable.
+    """
+    contract = ruled(outcome)
+
+    direct_vm.sender = direct_alice
+    contract.release()
+
+    by_addr = {"customer": to_hex(direct_alice), "provider": to_hex(direct_bob)}
+    assert len(transfers) == len(expected_recipients)
+    assert [t["to"] for t in transfers] == [by_addr[r] for r in expected_recipients]
+    assert all(t["value"] > 0 for t in transfers)
+    assert all(t["channel"] == CHANNEL_EVM_EXTERNAL for t in transfers)
+    assert sum(t["value"] for t in transfers) == ONE_ETH
+
+
+def test_settle_never_uses_the_internal_contract_message_path():
+    """Source-level guard on `_settle`, complementing the runtime channel check.
+
+    A runtime assertion only covers the paths a test happens to drive. This
+    reads the settlement primitive itself, so a new payout line added through
+    the wrong proxy fails even if no test exercises its outcome.
+    """
+    source = CONTRACT_PATH.read_text(encoding="utf-8")
+    body = source.split("def _settle(")[1].split("\n    # ===")[0]
+
+    assert "get_contract_at" not in body, (
+        "_settle must not use gl.get_contract_at — it lowers to an internal "
+        "PostMessage, which is inert when aimed at an EOA and silently strands "
+        "the escrow"
+    )
+    assert body.count("_EoaRecipient(") == 2, "both payouts go through the EVM stub"
+
+
+def test_release_does_not_pay_before_finalization(
+    ruled, direct_vm, direct_alice, transfers
+):
+    """RESOLVED means the payout is queued, not that anyone has been paid.
+
+    External messages execute at finalization. On Bradbury the probe measured a
+    31-minute gap during which the contract still held the entire escrow while
+    reading RESOLVED. Anything that reports completed payment from the status
+    alone is wrong for that whole window.
+    """
+    contract = ruled("PARTIAL_REFUND")
+    addr = contract_address_of(contract)
+    direct_vm._balances[addr] = ONE_ETH
+
+    direct_vm.sender = direct_alice
+    contract.release()
+
+    settlement = contract.get_settlement_status()
+    assert settlement["status"] == "RESOLVED"
+    assert settlement["settlement_queued"] is True
+    assert settlement["payout_complete"] is False, "queued is not paid"
+    assert int(settlement["contract_balance_atto"]) == ONE_ETH
+
+    # Now let the queued transfers execute, as finalization would.
+    apply_finalization(direct_vm, contract, transfers)
+
+    settled = contract.get_settlement_status()
+    assert settled["payout_complete"] is True
+    assert int(settled["contract_balance_atto"]) == 0
+
+
+def test_settlement_status_reports_the_expected_split(ruled, direct_vm, direct_alice):
+    contract = ruled("PARTIAL_REFUND")
+    addr = contract_address_of(contract)
+    direct_vm._balances[addr] = ONE_ETH
+
+    direct_vm.sender = direct_alice
+    contract.release()
+
+    s = contract.get_settlement_status()
+    assert int(s["expected_customer_atto"]) == ONE_ETH // 4
+    assert int(s["expected_provider_atto"]) == ONE_ETH - ONE_ETH // 4
+    assert int(s["expected_customer_atto"]) + int(s["expected_provider_atto"]) == ONE_ETH
 
 
 @pytest.mark.parametrize("who", ["customer", "provider"])
@@ -179,7 +289,7 @@ def test_a_smuggled_refund_bps_cannot_move_the_escrow(
     disputed.release()
 
     # The escrow follows the agreed schedule for NO_BREACH, not the model.
-    assert transfers == [{"to": to_hex(direct_bob), "value": ONE_ETH, "on": "finalized"}]
+    assert transfers == [evm_payout(direct_bob, ONE_ETH)]
 
 
 def test_zero_value_legs_are_not_emitted(ruled, direct_vm, direct_alice, direct_bob, transfers):
@@ -219,8 +329,8 @@ def test_mutual_settlement_resolves_after_insufficient_evidence(
     assert state["settlement_pending"] is False
 
     assert transfers == [
-        {"to": to_hex(direct_alice), "value": ONE_ETH * 6 // 10, "on": "finalized"},
-        {"to": to_hex(direct_bob), "value": ONE_ETH * 4 // 10, "on": "finalized"},
+        evm_payout(direct_alice, ONE_ETH * 6 // 10),
+        evm_payout(direct_bob, ONE_ETH * 4 // 10),
     ]
 
 

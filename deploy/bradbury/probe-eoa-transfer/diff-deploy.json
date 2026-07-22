@@ -1,0 +1,26 @@
+{
+  "diff": {
+    "from": "00-before-deploy",
+    "to": "01-after-deploy"
+  },
+  "rows": {
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
+      "before_wei": "20510756741161397044",
+      "after_wei": "20510246451895962544",
+      "delta_wei": "-510289265434500",
+      "delta_gen": "-0.000510289265434500"
+    },
+    "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc": {
+      "before_wei": "1999560430653096050",
+      "after_wei": "1999560430653096050",
+      "delta_wei": "0",
+      "delta_gen": "0.000000000000000000"
+    },
+    "0x743D6AcC9b72C98e5C9E51A49e4A2C9CdbD03D18": {
+      "before_wei": "0",
+      "after_wei": "0",
+      "delta_wei": "0",
+      "delta_gen": "0.000000000000000000"
+    }
+  }
+}

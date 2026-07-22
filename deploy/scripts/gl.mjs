@@ -57,11 +57,27 @@ function hexToBytes(hex) {
   return b;
 }
 
+// CalldataAddress is what the SDK encodes as the address type. Newer
+// genlayer-js builds stopped re-exporting it from the package entrypoint and
+// from `calldata`, so fall back to the chunk that still exports it. Resolved
+// once at load: an address-typed constructor argument must encode as an
+// address, or the contract receives a plain string and the deployment is
+// silently wrong (this is exactly the class of bug ad00182 fixed).
+const ADDRESS_CLASS = await (async () => {
+  const direct = gljs.CalldataAddress ?? gljs.abi?.calldata?.CalldataAddress ?? calldata?.CalldataAddress;
+  if (direct) return direct;
+  const { readdirSync } = await import('node:fs');
+  const dir = new URL(`${GLM}/genlayer-js/dist/`);
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.js'))) {
+    const m = await import(new URL(f, dir).href).catch(() => null);
+    if (m?.CalldataAddress) return m.CalldataAddress;
+  }
+  return null;
+})();
+
 function mkAddress(bytes) {
-  // CalldataAddress is what the SDK encodes as the address type.
-  const A = gljs.CalldataAddress ?? calldata?.CalldataAddress;
-  if (!A) throw new Error('CalldataAddress not exported by genlayer-js');
-  return new A(bytes);
+  if (!ADDRESS_CLASS) throw new Error('CalldataAddress not found in genlayer-js');
+  return new ADDRESS_CLASS(bytes);
 }
 
 function parseScalar(v) {

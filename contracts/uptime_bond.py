@@ -24,8 +24,14 @@
 #
 # Appeals & finality: there is NO custom AI re-ruling method. Parties use
 # GenLayer's native transaction appeal to re-adjudicate the `rule` transaction,
-# and every settlement uses finalized transfers so funds never move before the
-# accepted decision is final.
+# and every settlement pays out through EVM external messages, which execute at
+# finalization — so funds never move before the accepted decision is final.
+#
+# Consequence worth stating plainly: RESOLVED means the payout is QUEUED, not
+# that anyone has been paid. The escrow leaves the contract only when the
+# settling transaction finalizes, tens of minutes later. Use
+# `get_settlement_status`, which is derived from the live contract balance, to
+# decide whether payment actually happened. Never infer it from `status`.
 
 import json
 from datetime import datetime, timezone
@@ -88,6 +94,36 @@ _MISSING_STATUS = (404, 410)
 _INACCESSIBLE_STATUS = (401, 403)
 
 _ZERO_ADDRESS = Address(bytes(20))
+
+
+# --- Payout channel -----------------------------------------------------------
+# The customer and the provider are externally owned accounts, not intelligent
+# contracts, so escrow must leave through an EVM external message.
+#
+# The SDK offers two `emit_transfer` methods that look interchangeable and are
+# not. `gl.get_contract_at(addr).emit_transfer(...)` lowers to a `PostMessage`
+# — an internal GenVM contract-to-contract message. Sent at an EOA it is inert:
+# it neither reverts nor moves value, so the transaction still reports
+# FINISHED_WITH_RETURN and finalizes having paid nobody. Four Bradbury
+# agreements settled that way and kept 100% of their escrow (see
+# `deploy/bradbury/probe-eoa-transfer/RESULT.md`).
+#
+# An `@gl.evm.contract_interface` stub lowers to `EthSend` with empty calldata,
+# which is a real EVM-layer value transfer. That path is proven live on
+# Bradbury by the probe: recipient +0.004 GEN, contract -0.004 GEN, exact.
+#
+# The stub declares no methods because none are called — only bare value moves.
+# This proxy's `emit_transfer` accepts `value` alone and has no `on` parameter;
+# external messages execute at finalization, which the probe confirmed
+# empirically (nothing moved at acceptance; the balance changed 31 minutes
+# later when the transaction finalized).
+@gl.evm.contract_interface
+class _EoaRecipient:
+    class View:
+        pass
+
+    class Write:
+        pass
 
 
 def _now() -> int:
@@ -419,11 +455,19 @@ class UptimeBond(gl.Contract):
 
     # ---- shared settlement primitive ----
     def _settle(self, refund_bps: int, mode: str) -> None:
-        """Flip to RESOLVED then emit exact, non-leaking finalized transfers.
+        """Flip to RESOLVED then queue exact, non-leaking external transfers.
 
         Every settlement path funnels through here so replay protection (the
         status flip), the exact-accounting invariant, proposal clearing, and the
         positive-value guard hold uniformly.
+
+        RESOLVED means "the ruling is settled and the payout is queued", NOT
+        "the recipients have been paid". The transfers below are EVM external
+        messages that execute when this transaction finalizes, which is minutes
+        to tens of minutes after it is accepted. Between acceptance and
+        finalization the status reads RESOLVED while the escrow is still fully
+        in custody. Anything that reports completed payment must verify the
+        contract's remaining native balance — see `get_settlement_status`.
         """
         total = self.escrow_atto
         customer_refund = total * refund_bps // _BPS_DENOM
@@ -436,11 +480,14 @@ class UptimeBond(gl.Contract):
         # Resolve before any transfer so no path can settle twice.
         self.status = S_RESOLVED
 
-        # Transfers apply only at finalization, so nothing moves before finality.
+        # External EVM messages — the only channel that actually pays an EOA.
+        # `value` is the sole parameter; these execute at finalization, so
+        # nothing moves before the accepted decision is final and the native
+        # appeal path stays safe.
         if customer_refund > 0:
-            gl.get_contract_at(self.customer).emit_transfer(value=customer_refund, on="finalized")
+            _EoaRecipient(self.customer).emit_transfer(value=u256(customer_refund))
         if provider_payout > 0:
-            gl.get_contract_at(self.provider).emit_transfer(value=provider_payout, on="finalized")
+            _EoaRecipient(self.provider).emit_transfer(value=u256(provider_payout))
 
     # ================================ views ===================================
     @gl.public.view
@@ -462,6 +509,36 @@ class UptimeBond(gl.Contract):
             "settlement_pending": self.settlement_pending,
             "settlement_proposer": self.settlement_proposer.as_hex,
             "settlement_refund_bps": self.settlement_refund_bps,
+        }
+
+    @gl.public.view
+    def get_settlement_status(self) -> dict:
+        """Report whether the escrow has actually left the contract.
+
+        Deliberately derived from the live native balance rather than from a
+        stored flag. The contract cannot observe its own finalization, so any
+        boolean it wrote during `release` would assert a payment that had not
+        happened yet — exactly the false confirmation that let the broken
+        payout path look successful. A balance cannot lie: while the queued
+        external transfers are pending, `contract_balance_atto` still holds the
+        escrow, and it drops to zero once they execute.
+
+        `payout_complete` is therefore evidence, not intent. Callers must use
+        it — not `status == RESOLVED` — before telling anyone they were paid.
+        """
+        balance = int(gl.get_contract_at(gl.message.contract_address).balance)
+        settled = self.status == S_RESOLVED
+        customer_share = self.escrow_atto * self.refund_bps // _BPS_DENOM
+        return {
+            "status": self.status,
+            "settlement_queued": settled,
+            "payout_complete": settled and balance == 0,
+            "contract_balance_atto": u256(balance),
+            "escrow_atto": self.escrow_atto,
+            "expected_customer_atto": u256(customer_share) if settled else u256(0),
+            "expected_provider_atto": (
+                u256(self.escrow_atto - customer_share) if settled else u256(0)
+            ),
         }
 
     @gl.public.view

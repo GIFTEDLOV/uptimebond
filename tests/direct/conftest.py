@@ -124,14 +124,30 @@ def deploy_bond(direct_vm, direct_deploy, direct_alice, direct_bob):
     return _deploy
 
 
+# Payout channels, distinguished by the gl_call operation the SDK emits.
+#
+# This distinction is the whole point of the fixture below. The original hook
+# recorded only PostMessage and reported `{"to", "value", "on"}` — which made a
+# payout aimed at an EOA through the *internal* contract-message channel look
+# exactly like a correct one. Every settlement assertion passed while four live
+# agreements paid nobody. A test that cannot tell the channels apart cannot
+# catch that bug, so the channel is now recorded and asserted.
+CHANNEL_EVM_EXTERNAL = "evm_external"  # EthSend — real value transfer to an EOA
+CHANNEL_INTERNAL_IC = "internal_ic"  # PostMessage — inert when aimed at an EOA
+
+
 @pytest.fixture
 def transfers(direct_vm):
-    """Capture the settlement transfers the contract emits.
+    """Capture settlement transfers, tagged with the channel that carried them.
 
-    ``_settle`` pays out via ``gl.get_contract_at(...).emit_transfer(...)``,
-    which direct mode surfaces as a PostMessage gl_call. Installing the
-    cross-contract hook lets tests assert on exact payout amounts and the
-    ``on="finalized"`` guarantee, which is otherwise invisible.
+    Records both channels rather than only the expected one: a regression that
+    reverts to `gl.get_contract_at(...)` must show up as a wrong-channel entry,
+    not as an empty list that a `== []` assertion might read as "no payout
+    attempted".
+
+    `on` is captured only for internal messages. The EVM proxy's
+    `emit_transfer` has no `on` parameter — external messages execute at
+    finalization by default, which the Bradbury probe confirmed empirically.
     """
     captured = []
 
@@ -140,15 +156,74 @@ def transfers(direct_vm):
         if msg is not None:
             captured.append(
                 {
+                    "channel": CHANNEL_INTERNAL_IC,
                     "to": to_hex(msg["address"]),
                     "value": int(msg["value"]),
                     "on": msg["on"],
                 }
             )
+            return {"ok": None}
+
+        eth = request.get("EthSend")
+        if eth is not None:
+            captured.append(
+                {
+                    "channel": CHANNEL_EVM_EXTERNAL,
+                    "to": to_hex(eth["address"]),
+                    "value": int(eth.get("value", 0) or 0),
+                    # Empty calldata is what makes this a bare value transfer
+                    # rather than a method call.
+                    "calldata": bytes(eth.get("calldata", b"") or b""),
+                }
+            )
+            return {"ok": None}
+
         return {"ok": None}
 
     direct_vm._gl_call_hook = hook
     return captured
+
+
+def apply_finalization(direct_vm, contract, captured):
+    """Execute queued external transfers, as chain finalization would.
+
+    Direct mode queues the messages but never settles them, so a contract's
+    balance is unchanged after `release()` — which is also true on-chain
+    between acceptance and finalization. Tests that need the post-finalization
+    world call this to move the balances explicitly, keeping the two phases
+    distinguishable instead of silently collapsing them.
+    """
+    addr = contract_address_of(contract)
+    for t in captured:
+        if t["channel"] != CHANNEL_EVM_EXTERNAL:
+            continue  # internal messages move nothing at an EOA — model that
+        direct_vm._balances[addr] = direct_vm._balances.get(addr, 0) - t["value"]
+        to = bytes.fromhex(t["to"].removeprefix("0x"))
+        direct_vm._balances[to] = direct_vm._balances.get(to, 0) + t["value"]
+
+
+def evm_payout(to, value):
+    """The exact record a correct EOA payout produces.
+
+    Asserting against this rather than against `{"to", "value"}` alone is what
+    makes a regression to the internal channel fail: same recipient, same
+    amount, different `channel`.
+    """
+    return {
+        "channel": CHANNEL_EVM_EXTERNAL,
+        "to": to_hex(to),
+        "value": value,
+        "calldata": b"",
+    }
+
+
+def contract_address_of(contract):
+    """The deployed contract's raw 20-byte address, whatever form it is in."""
+    addr = getattr(contract, "address", None) or getattr(contract, "_address", None)
+    if isinstance(addr, str):
+        return bytes.fromhex(addr.removeprefix("0x"))
+    raw = getattr(addr, "as_bytes", None)
+    return raw if raw is not None else bytes(addr)
 
 
 @pytest.fixture

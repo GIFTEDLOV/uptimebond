@@ -23,3 +23,12 @@ GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting tra
 GenLayer RPC error (eth_sendRawTransaction): Node is not currently accepting transactions: pipeline backpressure (l1_sender_commit).
 [case-001-no-breach] 02-accept-sla: node refused submission (5/6), retrying in 240s — An internal error was received.
 [case-001-no-breach] 02-accept-sla: tx 0xc51147acbd9684aec127e5210f7c2fc8d83661fb6b2defc3ede0ef261039d105
+[case-001-no-breach] 02-accept-sla: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-001-no-breach] state: ACTIVE
+[case-001-no-breach] 03-open-dispute: open_dispute as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+[case-001-no-breach] 03-open-dispute: tx 0x101d2769bd67cbb006c10b164d52dc9071181052a8ff9d5462545386beb52b22
+[case-001-no-breach] 03-open-dispute: consensus=ACCEPTED/AGREE exec=FINISHED_WITH_RETURN votes={"AGREE":5} -> SUCCESS
+[case-001-no-breach] state: DISPUTED
+[case-001-no-breach] rule: this is the real validator adjudication — evidence is re-fetched by every validator
+[case-001-no-breach] 04-rule: rule as deployer (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+[case-001-no-breach] 04-rule: tx 0xf3182a7e0e98b79c046076faff88c74d8a0deea305a4c14b66ec11af01dcb09d

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   connectWallet, currentChainId, fmtGen, getInjected, pollTx, readAgreement,
-  readDeadlock, sendTx, shortAddr, switchToBradbury,
-  type AgreementState, type DeadlockStatus, type TxTracker,
+  readDeadlock, readSettlement, sendTx, shortAddr, switchToBradbury,
+  type AgreementState, type DeadlockStatus, type SettlementStatus, type TxTracker,
 } from './chain';
 import { AGREEMENTS, CHAIN_ID, CHAIN_NAME, EXPLORER, REPO, SOURCE_COMMIT } from './config';
 import { Deadlock, Evidence, LifecycleBar, Overview, Ruling, TxProgress, type Role } from './components/Panels';
@@ -17,6 +17,7 @@ export default function App() {
 
   const [st, setSt] = useState<AgreementState | null>(null);
   const [dl, setDl] = useState<DeadlockStatus | null>(null);
+  const [settlement, setSettlement] = useState<SettlementStatus | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +30,15 @@ export default function App() {
   const refresh = useCallback(async () => {
     if (!cfg.address) { setSt(null); setLoading(false); return; }
     try {
-      const [s, d] = await Promise.all([readAgreement(cfg.address), readDeadlock(cfg.address)]);
-      setSt(s); setDl(d); setLoadErr(null);
+      const [s, d, p] = await Promise.all([
+        readAgreement(cfg.address),
+        readDeadlock(cfg.address),
+        // Ground truth for whether the escrow actually left the contract.
+        // Tolerated as null so an older deployment without the view still
+        // renders — it just never claims the payout completed.
+        readSettlement(cfg.address).catch(() => null),
+      ]);
+      setSt(s); setDl(d); setSettlement(p); setLoadErr(null);
     } catch (e) {
       setLoadErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -288,15 +296,37 @@ export default function App() {
                 move before the accepted decision is final. A ruling that is accepted but
                 not yet finalized can still be overturned.
               </p>
+              {/* Payout completion is reported ONLY from the contract's
+                  measured native balance. `status === 'RESOLVED'` means the
+                  transfers are queued; they execute at finalization, tens of
+                  minutes later. Claiming payment from the status plus
+                  arithmetic — as this panel used to — states as fact something
+                  that has not happened yet, and stayed wrong indefinitely when
+                  the payout path was broken. */}
               {st.status === 'RESOLVED' && (
-                <div className="notice ok">
-                  Settled via <strong>{st.resolution_mode.replaceAll('_', ' ').toLowerCase()}</strong>.
-                  Customer received {fmtGen(
-                    (BigInt(st.escrow_atto) * BigInt(st.refund_bps)) / 10000n,
-                  )} GEN; provider received {fmtGen(
-                    BigInt(st.escrow_atto) - (BigInt(st.escrow_atto) * BigInt(st.refund_bps)) / 10000n,
-                  )} GEN, before gas.
-                </div>
+                settlement?.payout_complete ? (
+                  <div className="notice ok">
+                    Settled via <strong>{st.resolution_mode.replaceAll('_', ' ').toLowerCase()}</strong>.
+                    Payout confirmed on-chain: the contract balance is zero.
+                    Customer received {fmtGen(settlement.expected_customer_atto)} GEN;
+                    provider received {fmtGen(settlement.expected_provider_atto)} GEN,
+                    before gas.
+                  </div>
+                ) : (
+                  <div className="notice warn">
+                    Ruled and settled via{' '}
+                    <strong>{st.resolution_mode.replaceAll('_', ' ').toLowerCase()}</strong>,
+                    and the payout is <strong>queued, not yet paid</strong>.
+                    Settlement transfers execute when the release transaction
+                    finalizes. The contract still holds{' '}
+                    {settlement ? fmtGen(settlement.contract_balance_atto) : '—'} GEN.
+                    {settlement && BigInt(settlement.contract_balance_atto) > 0n && (
+                      <> Due: {fmtGen(settlement.expected_customer_atto)} GEN to the
+                      customer, {fmtGen(settlement.expected_provider_atto)} GEN to the
+                      provider.</>
+                    )}
+                  </div>
+                )
               )}
             </div>
           </div>

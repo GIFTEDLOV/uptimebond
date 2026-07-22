@@ -12,6 +12,7 @@ from conftest import (
     DEADLOCK_REFUND_BPS,
     INCIDENT,
     ONE_ETH,
+    evm_payout,
     mock_all_sources,
     mock_ruling,
     to_hex,
@@ -67,8 +68,8 @@ def test_dispute_deadlock_opens_exactly_at_the_deadline(
 
     # The split is the immutable one the provider accepted up front.
     assert transfers == [
-        {"to": to_hex(direct_alice), "value": ONE_ETH * 4 // 10, "on": "finalized"},
-        {"to": to_hex(direct_bob), "value": ONE_ETH * 6 // 10, "on": "finalized"},
+        evm_payout(direct_alice, ONE_ETH * 4 // 10),
+        evm_payout(direct_bob, ONE_ETH * 6 // 10),
     ]
 
 
