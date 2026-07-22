@@ -174,6 +174,34 @@ async function doDeploy() {
     log(`deploy: already deployed at ${existing.contract_address} — skipping`);
     return existing.contract_address;
   }
+  // A deploy whose hash was persisted but whose receipt was never observed —
+  // an interrupted wait — must NOT be redeployed. Recover the address from the
+  // hash instead. Without this, resuming an interrupted deploy silently
+  // creates a second contract and abandons the first, which is how escrow gets
+  // sent to an address nothing is tracking.
+  if (existing?.tx) {
+    log(`deploy: hash ${existing.tx} already submitted — recovering, not redeploying`);
+    const { state, detail } = await waitForTx(existing.tx, {
+      want: 'finalized',
+      onTick: (s, secs) => { if (secs % 120 === 0) log(`deploy: ${s} (${secs}s)`); },
+    });
+    if (state !== 'committed') {
+      log('deploy: prior submission still unresolved — halting rather than redeploying.');
+      process.exit(5);
+    }
+    const c0 = await client(await signer(CFG.accounts.customer));
+    const r0 = await tryReceipt(c0, existing.tx);
+    const addr0 = r0?.tx_data_decoded?.contract_address
+               ?? detail?.deployed_contract_address ?? r0?.recipient ?? null;
+    if (!addr0) {
+      log('deploy: committed but address not recoverable — halting for manual check.');
+      process.exit(5);
+    }
+    log(`deploy: recovered ${addr0}`);
+    save(`${OUT}/00-deploy.json`, { ...existing, stage: 'OBSERVED_RECOVERED',
+      contract_address: addr0, recovered_at: new Date().toISOString() });
+    return addr0;
+  }
   const ev = await preflightEvidence();
   log('deploy: evidence preflight OK (all four sources reachable)');
 

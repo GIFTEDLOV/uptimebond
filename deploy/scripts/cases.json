@@ -148,6 +148,57 @@
         "settleable": false,
         "note": "release() must revert. Escrow stays custodied pending mutual settlement, native appeal, or the deadlock fallback."
       }
+    },
+    "case-001-no-breach-v2": {
+      "_comment": "Redeployment on the fixed payout path (6e29b67). New case id so the broken run's records are preserved untouched.",
+      "evidence_dir": "evidence/case-001-no-breach",
+      "escrow_wei": "100000000000000000",
+      "escrow_label": "0.1 GEN",
+      "incident_window": "NimbusAPI May 2026 uptime review - clean month verification",
+      "expected": {
+        "outcome": "NO_BREACH",
+        "refund_bps": 0,
+        "maintenance_qualified": false,
+        "settleable": true,
+        "customer_share_bps": 0,
+        "provider_share_bps": 10000,
+        "customer_atto": "0",
+        "provider_atto": "100000000000000000",
+        "contract_balance_after_finalization_atto": "0"
+      }
+    },
+    "case-003-full-refund-v2": {
+      "_comment": "Redeployment on the fixed payout path (6e29b67). New case id so the broken run's records are preserved untouched.",
+      "evidence_dir": "evidence/case-003-full-refund",
+      "escrow_wei": "100000000000000000",
+      "escrow_label": "0.1 GEN",
+      "incident_window": "NimbusAPI May 2026 major unannounced outage dispute",
+      "expected": {
+        "outcome": "FULL_REFUND",
+        "refund_bps": 10000,
+        "maintenance_qualified": false,
+        "settleable": true,
+        "customer_share_bps": 10000,
+        "provider_share_bps": 0,
+        "customer_atto": "100000000000000000",
+        "provider_atto": "0",
+        "contract_balance_after_finalization_atto": "0"
+      }
+    },
+    "case-004-insufficient-evidence-v2": {
+      "_comment": "Redeployment on the fixed payout path (6e29b67). New case id so the broken run's records are preserved untouched. release() must revert here; the escrow stays custodied by design, so the contract balance is expected to remain 0.1 GEN.",
+      "evidence_dir": "evidence/case-004-insufficient-evidence",
+      "escrow_wei": "100000000000000000",
+      "escrow_label": "0.1 GEN",
+      "incident_window": "NimbusAPI May 2026 uptime dispute - monitor coverage incomplete",
+      "expected": {
+        "outcome": "INSUFFICIENT_EVIDENCE",
+        "refund_bps": 0,
+        "maintenance_qualified": false,
+        "settleable": false,
+        "note": "release() must revert. Escrow stays custodied pending mutual settlement, native appeal, or the deadlock fallback.",
+        "contract_balance_after_finalization_atto": "100000000000000000"
+      }
     }
   }
 }

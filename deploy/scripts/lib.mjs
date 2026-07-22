@@ -216,6 +216,11 @@ const RETRYABLE = [
   'pipeline backpressure',
   'not currently accepting transactions',
   'nonce too low',
+  // Two runs signing with the same account race on the sender nonce. The node
+  // rejects the loser before issuing a hash, so nothing committed and a retry
+  // is safe — it re-reads the nonce. Seen when case-001/003/004 were driven in
+  // parallel: contract queues are independent, but the signer's nonce is not.
+  'nonce is not consistent',
   'replacement transaction underpriced',
   'ECONNRESET', 'ETIMEDOUT', 'socket hang up', 'fetch failed',
   'Internal error', 'service unavailable', 'Bad Gateway', 'Gateway Timeout',
