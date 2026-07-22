@@ -20,6 +20,7 @@ export const TYPICAL_SETTLE_SECONDS = 1900;
 export type CaseId =
   | 'case-001-no-breach'
   | 'case-002-partial-refund'
+  | 'case-002-partial-refund-v2'
   | 'case-003-full-refund'
   | 'case-004-insufficient-evidence';
 
@@ -35,14 +36,48 @@ export interface AgreementConfig {
     refundBps: number;
     note: string;
   };
+  /** Present when the agreement was deployed from the broken payout path.
+   *
+   * These contracts are immutable and `release()` is single-shot, so their
+   * escrow can never be distributed. The ruling each one reached is valid and
+   * consensus-backed — only the payout is dead. They are kept visible for the
+   * audit trail and must not be presented as working demonstrations.
+   */
+  deprecated?: {
+    reason: string;
+    strandedLabel: string;
+    supersededBy?: CaseId;
+  };
 }
 
+const BROKEN_PAYOUT_REASON =
+  'Deployed before commit 6e29b67. Its settlement paid EOAs through an internal ' +
+  'GenVM message, which moves no value, so the escrow can never leave this ' +
+  'contract. The ruling is valid; the payout is not.';
+
 /**
- * The case-002 address is the proven live agreement and is the default demo.
- * The others are filled in as their deployments complete; a null address
- * renders as "not yet deployed" rather than breaking the UI.
+ * A null address renders as "not yet deployed" rather than breaking the UI.
+ *
+ * Every agreement below the v2 entry was deployed from the broken payout path
+ * and is marked `deprecated`. The default demo is the first entry, so the
+ * working redeployment must stay at the top of this list.
  */
 export const AGREEMENTS: AgreementConfig[] = [
+  {
+    id: 'case-002-partial-refund-v2',
+    label: 'Case 002 — Partial refund',
+    blurb:
+      'Maintenance window announced 2 hours ahead, against an SLA requiring 24. ' +
+      'The window does not qualify for exclusion, so its downtime counts and ' +
+      'uptime lands at 99.10%.',
+    // Fixed payout path, verified end to end on Bradbury: the escrow left the
+    // contract at finalization — 0.025 GEN to the customer, 0.075 to the
+    // provider, contract balance zero.
+    address: '0x965C9B454867273F612BD48d181Ec418391750d5',
+    escrowLabel: '0.1 GEN',
+    evidenceDir: 'evidence/case-002-partial-refund',
+    expected: { outcome: 'PARTIAL_REFUND', refundBps: 2500, note: '25% to the customer' },
+  },
   {
     id: 'case-002-partial-refund',
     label: 'Case 002 — Partial refund',
@@ -54,6 +89,11 @@ export const AGREEMENTS: AgreementConfig[] = [
     escrowLabel: '1 GEN',
     evidenceDir: 'evidence/case-002-partial-refund',
     expected: { outcome: 'PARTIAL_REFUND', refundBps: 2500, note: '25% to the customer' },
+    deprecated: {
+      reason: BROKEN_PAYOUT_REASON,
+      strandedLabel: '1 GEN',
+      supersededBy: 'case-002-partial-refund-v2',
+    },
   },
   {
     id: 'case-001-no-breach',
@@ -63,6 +103,13 @@ export const AGREEMENTS: AgreementConfig[] = [
     escrowLabel: '0.1 GEN',
     evidenceDir: 'evidence/case-001-no-breach',
     expected: { outcome: 'NO_BREACH', refundBps: 0, note: 'provider keeps the full escrow' },
+    deprecated: {
+      reason:
+        'Deployed before commit 6e29b67, on the broken payout path. It never ' +
+        'reached settlement, so the escrow is held by an unsettled agreement ' +
+        'rather than lost to a failed payout — but releasing it would fail.',
+      strandedLabel: '0.1 GEN',
+    },
   },
   {
     id: 'case-003-full-refund',
@@ -72,6 +119,7 @@ export const AGREEMENTS: AgreementConfig[] = [
     escrowLabel: '0.1 GEN',
     evidenceDir: 'evidence/case-003-full-refund',
     expected: { outcome: 'FULL_REFUND', refundBps: 10000, note: '100% to the customer' },
+    deprecated: { reason: BROKEN_PAYOUT_REASON, strandedLabel: '0.1 GEN' },
   },
   {
     id: 'case-004-insufficient-evidence',
@@ -86,6 +134,13 @@ export const AGREEMENTS: AgreementConfig[] = [
       outcome: 'INSUFFICIENT_EVIDENCE',
       refundBps: 0,
       note: 'no automatic settlement — release() reverts by design',
+    },
+    deprecated: {
+      reason:
+        'Deployed before commit 6e29b67, on the broken payout path. ' +
+        'INSUFFICIENT_EVIDENCE has no automatic settlement by design, so this ' +
+        'case never exercised the payout bug.',
+      strandedLabel: '0.1 GEN',
     },
   },
 ];

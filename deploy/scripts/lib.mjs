@@ -187,7 +187,7 @@ const TERMINAL_BAD = new Set(['canceled', 'undetermined', 'validators_timeout', 
  *   committed | failed | pending  (pending = still in flight when we gave up)
  * Never throws on timeout — an unknown outcome must be reported, not guessed.
  */
-export async function waitForTx(hash, { want = 'accepted', timeoutMs = 2_400_000,
+export async function waitForTx(hash, { want = 'accepted', timeoutMs = 3_600_000,
                                         intervalMs = 15_000, onTick } = {}) {
   const started = Date.now();
   let last = null;

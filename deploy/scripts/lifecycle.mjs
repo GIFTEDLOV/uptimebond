@@ -108,7 +108,25 @@ async function send(step, { account, method, args = [], value = 0n, expectSigner
     warning: 'Receipt not yet observed. Verify on-chain state before any retry.',
   });
 
+  // Wait for FINALIZATION, not acceptance.
+  //
+  // Two independent reasons, both learned the hard way on Bradbury:
+  //
+  // 1. Submitting the next step while earlier ones are still unfinalized gets
+  //    the transaction reverted by the consensus contract. The case-002-v2 run
+  //    queued fund/accept/dispute on acceptance and then had `rule` reverted at
+  //    submission — EVM status 0x0, ~30 minutes before the dispute finalized.
+  //    Replaying that same call one block earlier succeeded, so it was the
+  //    queue state at inclusion that rejected it, not the call itself.
+  //
+  // 2. Settlement transfers are external messages that execute at
+  //    finalization. A run that stops at acceptance would report a payout that
+  //    has not happened, which is the exact failure this harness now exists to
+  //    prove against.
+  //
+  // Finality costs ~30 minutes per step. That is the real speed of the chain.
   const { state, detail } = await waitForTx(hash, {
+    want: 'finalized',
     onTick: (s, secs) => { if (secs % 120 === 0) log(`${step}: ${s} (${secs}s)`); },
   });
 
@@ -184,7 +202,10 @@ async function doDeploy() {
     explorer: `${EXPLORER}/tx/${hash}`, submitted_at: new Date().toISOString(),
   });
 
+  // Finalization, for the same reason as every other step: the constructor's
+  // state must be settled before `fund` is submitted against it.
   const { state, detail } = await waitForTx(hash, {
+    want: 'finalized',
     onTick: (s, secs) => { if (secs % 120 === 0) log(`deploy: ${s} (${secs}s)`); },
   });
   if (state !== 'committed') {

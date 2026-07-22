@@ -238,6 +238,21 @@ export default function App() {
 
       <p className="blurb">{cfg.blurb}</p>
 
+      {/* Deprecated agreements stay reachable for the audit trail, but must
+          never be mistaken for a working demonstration: their escrow is
+          permanently stuck. */}
+      {cfg.deprecated && (
+        <div className="notice error">
+          <strong>Deprecated deployment — escrow permanently stranded.</strong>{' '}
+          {cfg.deprecated.reason} {cfg.deprecated.strandedLabel} is locked in this
+          contract and cannot be recovered: the contract is immutable and{' '}
+          <code>release()</code> is single-shot.
+          {cfg.deprecated.supersededBy && (
+            <> Superseded by the redeployment on the fixed payout path.</>
+          )}
+        </div>
+      )}
+
       <TxProgress tx={tx} onDismiss={() => setTx({ phase: 'idle' })} />
 
       {loading && <div className="card"><p className="muted">Loading on-chain state…</p></div>}

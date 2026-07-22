@@ -32,15 +32,38 @@ describe('formatting', () => {
 });
 
 describe('agreement config', () => {
-  it('has a deployed address for every case', () => {
+  it('has a well-formed address wherever one is set', () => {
     for (const a of AGREEMENTS) {
-      expect(a.address, `${a.id} must have an address`).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      if (a.address === null) continue; // not yet deployed — renders as such
+      expect(a.address, `${a.id} address must be well formed`).toMatch(/^0x[0-9a-fA-F]{40}$/);
     }
   });
 
-  it('defaults to the proven case-002 agreement', () => {
-    expect(AGREEMENTS[0].id).toBe('case-002-partial-refund');
-    expect(AGREEMENTS[0].address).toBe('0x4dc6b188b3025f92F133515c3041cbc4E2019988');
+  it('defaults to an agreement on the fixed payout path', () => {
+    // The default demo must never be a contract whose escrow cannot move.
+    // Every pre-6e29b67 deployment is marked deprecated for exactly that
+    // reason, so the first entry has to be an undeprecated one.
+    expect(AGREEMENTS[0].deprecated).toBeUndefined();
+    expect(AGREEMENTS[0].id).toBe('case-002-partial-refund-v2');
+  });
+
+  it('marks every broken-payout deployment as deprecated', () => {
+    // These four settled or are settling through the internal-message payout
+    // path and can never distribute their escrow. Presenting any of them as a
+    // working demo would be a lie the UI is responsible for not telling.
+    const stranded = [
+      '0x4dc6b188b3025f92F133515c3041cbc4E2019988',
+      '0x7EA49E783B4839a20c39F77FFe62b3beF10195b7',
+      '0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC',
+      '0xb0C263bEf959E640060045D47659582D23bb67c0',
+    ].map((a) => a.toLowerCase());
+
+    for (const a of AGREEMENTS) {
+      if (a.address && stranded.includes(a.address.toLowerCase())) {
+        expect(a.deprecated, `${a.id} must be marked deprecated`).toBeDefined();
+        expect(a.deprecated?.strandedLabel).toMatch(/GEN$/);
+      }
+    }
   });
 
   it('never points at the failed ghost contract', () => {

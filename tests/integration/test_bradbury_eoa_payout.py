@@ -97,6 +97,51 @@ def test_probe_view_agrees_with_the_chain(client):
     assert contract_balance + PROBE_PAID == PROBE_LOADED
 
 
+# ------------------- case-002 redeployment on the fixed path ------------------
+
+# First UptimeBond agreement settled through the corrected payout path.
+CASE_002_V2 = "0x965C9B454867273F612BD48d181Ec418391750d5"
+CASE_002_V2_ESCROW = 10**17  # 0.1 GEN
+CASE_002_V2_CUSTOMER_SHARE = 25 * 10**15  # 2500 bps
+CASE_002_V2_PROVIDER_SHARE = 75 * 10**15
+
+
+def test_case_002_v2_distributed_its_entire_escrow(client):
+    """The contract kept nothing.
+
+    This is the assertion the old suite could not make, and the one that fails
+    for every pre-6e29b67 deployment: all four of those still hold their full
+    escrow while reporting a completed settlement.
+    """
+    assert client.get_balance(CASE_002_V2) == 0
+
+
+def test_case_002_v2_split_is_exact():
+    """25/75, summing to the escrow with nothing minted or lost."""
+    assert CASE_002_V2_CUSTOMER_SHARE == CASE_002_V2_ESCROW * 2500 // 10000
+    assert CASE_002_V2_CUSTOMER_SHARE + CASE_002_V2_PROVIDER_SHARE == CASE_002_V2_ESCROW
+
+
+def test_deprecated_contracts_still_hold_their_escrow(client):
+    """Pins the damage so it cannot be quietly forgotten or misreported.
+
+    Each of these settled or is settling through the internal-message payout
+    path. Their rulings are valid; their escrow is unreachable. If any of these
+    balances ever changes, the assumption that the funds are permanently
+    stranded needs revisiting.
+    """
+    stranded = {
+        "0x4dc6b188b3025f92F133515c3041cbc4E2019988": 10**18,
+        "0x7EA49E783B4839a20c39F77FFe62b3beF10195b7": 10**17,
+        "0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC": 10**17,
+        "0xb0C263bEf959E640060045D47659582D23bb67c0": 10**17,
+    }
+    for address, held in stranded.items():
+        assert client.get_balance(address) == held, (
+            f"{address} balance changed — the stranded-funds assessment needs review"
+        )
+
+
 # ----------------------- reusable payout verification ------------------------
 
 

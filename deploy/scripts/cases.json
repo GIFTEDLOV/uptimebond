@@ -2,7 +2,10 @@
   "_comment": "Bradbury lifecycle definitions. Evidence URLs are pinned to an immutable commit; branch URLs are never used because validators re-fetch independently and a moving source would cause spurious disagreement.",
   "evidence_commit": "ad0018207edfba936b4074d3f1ccb5a2df58ac3b",
   "repo_raw_base": "https://raw.githubusercontent.com/GIFTEDLOV/uptimebond",
-  "accounts": { "customer": "deployer", "provider": "provider" },
+  "accounts": {
+    "customer": "deployer",
+    "provider": "provider"
+  },
   "addresses": {
     "customer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc"
@@ -15,6 +18,52 @@
   "never_touch": {
     "ghost_contract": "0xB82f70950BbEfBC6829c463A5922Bb1B6333C637",
     "reason": "Failed deployment from the pre-ad00182 constructor bug. Never fund or interact."
+  },
+  "deprecated": {
+    "_comment": "Deployed from the pre-6e29b67 source, whose _settle paid EOAs through an internal GenVM PostMessage instead of an EVM external message. The message was inert: settlement reported FINISHED_WITH_RETURN and finalized without moving value. The ruling on each of these is VALID and consensus-backed; only the payout is broken. These contracts are immutable and release() is single-shot, so the escrow cannot be recovered by any further call. Do not call release again, do not fund, and do not use them for frontend demonstration.",
+    "payout_implementation": "BROKEN",
+    "state_ruling": "VALID",
+    "escrow_distributed": false,
+    "suitable_for_demo": false,
+    "recoverable": false,
+    "contracts": {
+      "0x4dc6b188b3025f92F133515c3041cbc4E2019988": {
+        "case": "case-002-partial-refund",
+        "status": "RESOLVED",
+        "outcome": "PARTIAL_REFUND",
+        "refund_bps": 2500,
+        "stranded_atto": "1000000000000000000",
+        "stranded_label": "1 GEN",
+        "superseded_by": "case-002-partial-refund-v2"
+      },
+      "0x7EA49E783B4839a20c39F77FFe62b3beF10195b7": {
+        "case": "case-003-full-refund",
+        "status": "RESOLVED",
+        "outcome": "FULL_REFUND",
+        "refund_bps": 10000,
+        "stranded_atto": "100000000000000000",
+        "stranded_label": "0.1 GEN",
+        "superseded_by": null
+      },
+      "0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC": {
+        "case": "case-001-no-breach",
+        "status": "DISPUTED",
+        "outcome": null,
+        "note": "Never reached settlement, so the broken payout was never exercised. Escrow is still held by an unsettled agreement rather than stranded by a failed payout.",
+        "stranded_atto": "100000000000000000",
+        "stranded_label": "0.1 GEN",
+        "superseded_by": null
+      },
+      "0xb0C263bEf959E640060045D47659582D23bb67c0": {
+        "case": "case-004-insufficient-evidence",
+        "status": "AWAITING_PROVIDER_ACCEPTANCE",
+        "outcome": null,
+        "note": "Never reached settlement. INSUFFICIENT_EVIDENCE has no automatic payout by design, so this case would not have exercised the bug on release() either.",
+        "stranded_atto": "100000000000000000",
+        "stranded_label": "0.1 GEN",
+        "superseded_by": null
+      }
+    }
   },
   "cases": {
     "case-001-no-breach": {
@@ -44,6 +93,33 @@
         "settleable": true,
         "customer_share_bps": 2500,
         "provider_share_bps": 7500
+      }
+    },
+    "case-002-partial-refund-v2": {
+      "_comment": "Redeployment of case-002 on the fixed payout path (6e29b67). New case id so the broken run's records in deploy/bradbury/case-002-partial-refund/ are preserved untouched. Escrow reduced to 0.1 GEN \u2014 the earlier 1 GEN is stranded and there is no reason to risk that much again.",
+      "evidence_dir": "evidence/case-002-partial-refund",
+      "escrow_wei": "100000000000000000",
+      "escrow_label": "0.1 GEN",
+      "incident_window": "NimbusAPI May 2026 uptime and maintenance-notice dispute",
+      "expected": {
+        "outcome": "PARTIAL_REFUND",
+        "refund_bps": 2500,
+        "maintenance_qualified": false,
+        "settleable": true,
+        "customer_share_bps": 2500,
+        "provider_share_bps": 7500,
+        "customer_atto": "25000000000000000",
+        "provider_atto": "75000000000000000",
+        "contract_balance_after_finalization_atto": "0"
+      },
+      "contract_address": "0x965C9B454867273F612BD48d181Ec418391750d5",
+      "verified": {
+        "payout_confirmed_on_chain": true,
+        "release_tx": "0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064",
+        "customer_delta_atto": "25000000000000000",
+        "provider_delta_atto": "75000000000000000",
+        "contract_balance_after_atto": "0",
+        "duplicate_release_reverted_tx": "0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649"
       }
     },
     "case-003-full-refund": {
