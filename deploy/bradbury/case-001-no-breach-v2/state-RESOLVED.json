@@ -1,0 +1,23 @@
+{
+  "case": "case-001-no-breach-v2",
+  "contract": "0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe",
+  "state": {
+    "breached_clause_ids": [],
+    "customer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "dispute_opened_at": 1784796332,
+    "escrow_atto": "100000000000000000",
+    "incident_window": "NimbusAPI May 2026 uptime review - clean month verification",
+    "insufficient_evidence_ruled_at": 0,
+    "maintenance_qualified": false,
+    "outcome": "NO_BREACH",
+    "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "refund_bps": 0,
+    "resolution_mode": "CONSENSUS_RULING",
+    "ruling_reason": "The independent monitor reports 36 minutes of unplanned downtime, resulting in an uptime of 99.92%. This exceeds the SLA commitment of 99.50% as defined in clause SLA-1. The single maintenance window was properly announced but resulted in no downtime, and the two incidents were not within announced maintenance windows. Therefore, the SLA is met with no breach.",
+    "settlement_pending": false,
+    "settlement_proposer": "0x0000000000000000000000000000000000000000",
+    "settlement_refund_bps": 0,
+    "status": "RESOLVED"
+  },
+  "read_at": "2026-07-23T11:26:57.022Z"
+}

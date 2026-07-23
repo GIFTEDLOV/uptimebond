@@ -1,0 +1,25 @@
+{
+  "case": "case-001-no-breach-v2",
+  "contract": "0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe",
+  "expected": {
+    "outcome": "NO_BREACH",
+    "refund_bps": 0,
+    "customer_atto": "0",
+    "provider_atto": "100000000000000000",
+    "contract_balance_after_atto": "0"
+  },
+  "verified": {
+    "payout_confirmed_on_chain": true,
+    "open_dispute_tx": "0x5ab29ae20127e9cefb60707e818f2b135bf2f1e396b559190f6732b12d43e61b",
+    "rule_tx": "0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c",
+    "rule_consensus": "FINALIZED, NO_BREACH, votes AGREE:3 TIMEOUT:2 (majority AGREE, finalized correctly)",
+    "release_tx": "0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d",
+    "release_consensus": "FINALIZED, AGREE:5",
+    "release_first_attempt": "0x6f4c9dd0f1194f8e63bd52f46d15dde5b6282aadf43afcaf3e692a58216c1ce7 reverted at consensus-contract submission (no GenLayer tx created, nothing orphaned); succeeded on retry, confirming transient node congestion",
+    "gross_provider_transfer_atto": "100000000000000000",
+    "gross_customer_transfer_atto": "0",
+    "contract_balance_after_atto": "0",
+    "note": "Contract 0.1 GEN -> 0, customer delta 0, so by conservation the provider received exactly 0.1 GEN gross. Provider net matches (it did not sign any tx here)."
+  },
+  "read_at": "2026-07-23T15:32:45.669362+00:00"
+}
