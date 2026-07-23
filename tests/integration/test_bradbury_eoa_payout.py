@@ -122,6 +122,35 @@ def test_case_002_v2_split_is_exact():
     assert CASE_002_V2_CUSTOMER_SHARE + CASE_002_V2_PROVIDER_SHARE == CASE_002_V2_ESCROW
 
 
+# Every settleable outcome, redeployed on the fixed path and settled: each
+# contract distributed its whole escrow and kept nothing.
+SETTLED_TO_ZERO = {
+    "0x965C9B454867273F612BD48d181Ec418391750d5": "case-002-v2 PARTIAL_REFUND",
+    "0xDF1A19ACBE068373f067EF6E226EE564032f4676": "case-003-v2 FULL_REFUND",
+    "0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe": "case-001-v2 NO_BREACH",
+}
+
+# The non-settling outcome: release() reverts, so the escrow stays custodied.
+# Its balance staying at 0.1 GEN is the correct result, not a failure.
+CASE_004_V2 = "0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d"
+CASE_004_V2_CUSTODIED = 10**17
+
+
+@pytest.mark.parametrize("address,label", list(SETTLED_TO_ZERO.items()))
+def test_settleable_cases_distributed_everything(client, address, label):
+    assert client.get_balance(address) == 0, f"{label} kept escrow it should have paid out"
+
+
+def test_insufficient_evidence_keeps_the_escrow_custodied(client):
+    """The inverse gate: the non-settling outcome must NOT pay.
+
+    release() reverts for INSUFFICIENT_EVIDENCE, so the contract still holds the
+    full escrow. This is what proves the payout fix is scoped to settleable
+    outcomes and did not turn the unsettleable one into a payout too.
+    """
+    assert client.get_balance(CASE_004_V2) == CASE_004_V2_CUSTODIED
+
+
 def test_deprecated_contracts_still_hold_their_escrow(client):
     """Pins the damage so it cannot be quietly forgotten or misreported.
 

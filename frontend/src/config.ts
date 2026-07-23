@@ -19,10 +19,13 @@ export const TYPICAL_SETTLE_SECONDS = 1900;
 
 export type CaseId =
   | 'case-001-no-breach'
+  | 'case-001-no-breach-v2'
   | 'case-002-partial-refund'
   | 'case-002-partial-refund-v2'
   | 'case-003-full-refund'
-  | 'case-004-insufficient-evidence';
+  | 'case-003-full-refund-v2'
+  | 'case-004-insufficient-evidence'
+  | 'case-004-insufficient-evidence-v2';
 
 export interface AgreementConfig {
   id: CaseId;
@@ -77,6 +80,45 @@ export const AGREEMENTS: AgreementConfig[] = [
     escrowLabel: '0.1 GEN',
     evidenceDir: 'evidence/case-002-partial-refund',
     expected: { outcome: 'PARTIAL_REFUND', refundBps: 2500, note: '25% to the customer' },
+  },
+  {
+    id: 'case-001-no-breach-v2',
+    label: 'Case 001 — No breach',
+    blurb: 'A clean month at 99.92% uptime, comfortably above the 99.5% commitment.',
+    // Fixed payout path, verified: provider received the full 0.1 GEN at
+    // finalization, contract balance zero.
+    address: '0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe',
+    escrowLabel: '0.1 GEN',
+    evidenceDir: 'evidence/case-001-no-breach',
+    expected: { outcome: 'NO_BREACH', refundBps: 0, note: 'provider keeps the full escrow' },
+  },
+  {
+    id: 'case-003-full-refund-v2',
+    label: 'Case 003 — Full refund',
+    blurb: 'A 23-hour unannounced outage drops uptime to 96.80%, below the 98% floor.',
+    // Fixed payout path, verified: customer received the full 0.1 GEN at
+    // finalization, contract balance zero.
+    address: '0xDF1A19ACBE068373f067EF6E226EE564032f4676',
+    escrowLabel: '0.1 GEN',
+    evidenceDir: 'evidence/case-003-full-refund',
+    expected: { outcome: 'FULL_REFUND', refundBps: 10000, note: '100% to the customer' },
+  },
+  {
+    id: 'case-004-insufficient-evidence-v2',
+    label: 'Case 004 — Insufficient evidence',
+    blurb:
+      'The monitor covered only 61.62% of the period and the provider claims 100% ' +
+      'uptime. The evidence cannot support a financial ruling.',
+    // Fixed payout path, verified: release() reverts and the 0.1 GEN stays
+    // custodied — the non-settling outcome moves no value, by design.
+    address: '0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d',
+    escrowLabel: '0.1 GEN',
+    evidenceDir: 'evidence/case-004-insufficient-evidence',
+    expected: {
+      outcome: 'INSUFFICIENT_EVIDENCE',
+      refundBps: 0,
+      note: 'no automatic settlement — release() reverts by design',
+    },
   },
   {
     id: 'case-002-partial-refund',
