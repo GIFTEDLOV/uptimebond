@@ -62,10 +62,24 @@ Exit codes: `0` ok · `1` execution error · `2` transaction failed ·
 
 Three behaviours found the hard way, all handled:
 
-**Transactions are serialized per contract and slow.** Each step waits on the
-previous one's finality — roughly 26–32 minutes per transaction on the same
-contract. Different contracts have independent queues, so run cases in
-parallel, not in sequence.
+**Transactions are serialized per contract and slow.** Each step now waits on
+the previous one's **finality** — roughly 26–32 minutes per transaction on the
+same contract. (It used to advance on acceptance; that got the next step
+reverted by the consensus contract while the previous one was unfinalized, and
+it would report a settlement whose transfers had not executed. See the
+finalization comment in `lifecycle.mjs`.)
+
+**Run cases serially, not in parallel — despite the independent per-contract
+queues.** The earlier advice here said the opposite and it is wrong. All cases
+sign with the same customer account, and under load the node intermittently
+reverts a submission at the consensus contract (`0x0112Bf6e…`) — the revert
+lands *before* a GenLayer transaction hash exists, so nothing commits and the
+run halts. This was observed both with two runs sharing the signer and in a
+fully serial run, alongside `TIMEOUT` / `DETERMINISTIC_VIOLATION` validator
+votes and `l1_sender_commit` backpressure — i.e. it is node congestion, not
+purely a signer race. A retry clears it every time. Running serially keeps only
+one submission in flight and makes these retries tractable; true parallelism
+would need a separate signer per case.
 
 **The JSON-RPC receipt endpoint is unreliable under load.** It intermittently
 returns HTML or `Internal error`. Status polling goes through the explorer index
