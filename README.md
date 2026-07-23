@@ -66,8 +66,8 @@ GenLayer is the only piece here that isn't off-the-shelf. It provides:
   `gl.nondet.exec_prompt()` run *inside* consensus. The contract fetches its own
   evidence and calls its own model — it doesn't trust an oracle to do it.
 - **Native GEN escrow.** The same system that adjudicates also custodies and
-  pays out, with `on="finalized"` transfers so funds never move before the
-  decision is final.
+  pays out. Payouts are EVM external messages that execute at finalization by
+  protocol behavior, so funds never move before the decision is final.
 - **Native appeals.** A disputed ruling is re-adjudicated by the protocol, not
   by a bespoke "ask the AI again" method the contract author invented.
 
@@ -132,7 +132,7 @@ AWAITING_FUNDING ──fund()──► AWAITING_PROVIDER_ACCEPTANCE ──accept
                                                   RESOLVED               RESOLVED             RESOLVED
 ```
 
-14 public methods: 4 view, 10 write.
+15 public methods: 5 view, 10 write.
 
 ### Evidence model
 
@@ -187,9 +187,11 @@ implementation is documented in
 ### Appeals and finality
 
 There is **no custom AI re-ruling method**. Parties use GenLayer's native
-transaction appeal to re-adjudicate the `rule` transaction. Every settlement
-uses `on="finalized"` transfers, so funds never move before the accepted
-decision is final — which is exactly what makes the appeal path safe.
+transaction appeal to re-adjudicate the `rule` transaction. Every settlement is
+paid by EVM external messages that execute at finalization by protocol behavior
+(the proxy's `emit_transfer` takes only `value=…`; there is no `on` parameter),
+so funds never move before the accepted decision is final — which is exactly
+what makes the appeal path safe.
 
 ### Deadlock handling
 
@@ -209,7 +211,7 @@ these, `INSUFFICIENT_EVIDENCE` would strand the escrow permanently.
 
 Two layers, deliberately different in what they can prove.
 
-**Direct Mode — 195 tests, ~25s, no network.** Hermetic, mocks evidence and LLM
+**Direct Mode — 201 tests, ~30s, no network.** Hermetic, mocks evidence and LLM
 responses inline, runs the leader function only. This is where exhaustive
 coverage lives: state transitions, access control, exact wei accounting, HTTP
 classification, malformed model output, and the validator agreement rule via
@@ -226,14 +228,14 @@ they fail:
 | Clause IDs left unsorted | 1 |
 | `release` skips the settleable check | 1 |
 | Model-supplied `refund_bps` trusted | 6 |
-| Constructor double-conversion (the Bradbury bug) | **181 of 195** |
+| Constructor double-conversion (the Bradbury bug) | **186 of 201** |
 
 **Live Bradbury** — real validators, real GEN, real evidence over HTTP. Slow
 (~30 min per transaction) and therefore narrow, but it is the only layer that
 proves the model actually reaches the right verdict against real sources.
 
 ```bash
-pytest tests/direct/ -q                                   # 195 tests
+pytest tests/direct/ -q                                   # 201 tests
 genvm-lint check contracts/uptime_bond.py                 # lint + validation
 node deploy/scripts/lifecycle.mjs --case <id> --status    # live state
 ```
@@ -272,15 +274,14 @@ Each agreement was funded with **0.1 GEN**. Case 004 is the inverse gate:
 the escrow stays in custody — proving the payout fix pays settleable outcomes
 without turning the unsettleable one into a payout.
 
-**Transactions** (all hashes are full; open at
-`https://explorer-bradbury.genlayer.com/tx/<hash>`):
+**Transactions** — each links to its full transaction on the Bradbury explorer:
 
 | Case | Deploy tx | Ruling tx | Release tx |
 |---|---|---|---|
-| 001-v2 | `0x846a227db36d4e3e87199aa1bafebcb09b0bfb056be6f7a3939dcfe2805129a3` | `0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c` | `0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d` |
-| 002-v2 | `0x28215db5fd84ee69154ce6a368d8b6023cf1fb848f623e2e33139eae3bf6893c` | `0x2c0ebf63ede17d46da4566133abd9bffb8d31fd2f240549df905506ee2165e97` | `0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064` |
-| 003-v2 | `0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1` | `0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae` | `0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a` |
-| 004-v2 | `0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945` | `0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3` | `0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47` (reverted, by design) |
+| 001-v2 | [`0x846a227db36d4e3e87199aa1bafebcb09b0bfb056be6f7a3939dcfe2805129a3`](https://explorer-bradbury.genlayer.com/tx/0x846a227db36d4e3e87199aa1bafebcb09b0bfb056be6f7a3939dcfe2805129a3) | [`0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c`](https://explorer-bradbury.genlayer.com/tx/0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c) | [`0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d`](https://explorer-bradbury.genlayer.com/tx/0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d) |
+| 002-v2 | [`0x28215db5fd84ee69154ce6a368d8b6023cf1fb848f623e2e33139eae3bf6893c`](https://explorer-bradbury.genlayer.com/tx/0x28215db5fd84ee69154ce6a368d8b6023cf1fb848f623e2e33139eae3bf6893c) | [`0x2c0ebf63ede17d46da4566133abd9bffb8d31fd2f240549df905506ee2165e97`](https://explorer-bradbury.genlayer.com/tx/0x2c0ebf63ede17d46da4566133abd9bffb8d31fd2f240549df905506ee2165e97) | [`0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064`](https://explorer-bradbury.genlayer.com/tx/0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064) |
+| 003-v2 | [`0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1`](https://explorer-bradbury.genlayer.com/tx/0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1) | [`0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae`](https://explorer-bradbury.genlayer.com/tx/0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae) | [`0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a`](https://explorer-bradbury.genlayer.com/tx/0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a) |
+| 004-v2 | [`0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945`](https://explorer-bradbury.genlayer.com/tx/0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945) | [`0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3`](https://explorer-bradbury.genlayer.com/tx/0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3) | [`0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47`](https://explorer-bradbury.genlayer.com/tx/0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47) — reverted, by design |
 
 Consensus notes: 002-v2 ruled and released at a clean 5/5 AGREE. 001-v2 and
 003-v2 ruled on 3/5 majorities (with 2 validator `TIMEOUT` and 2
@@ -288,8 +289,8 @@ Consensus notes: 002-v2 ruled and released at a clean 5/5 AGREE. 001-v2 and
 outcomes, weaker margins from validator-side re-execution under node load, not
 contract faults. 004-v2's `release()` was ACCEPTED by consensus but execution
 `FINISHED_WITH_ERROR` with 5/5 DISAGREE — the `Outcome INSUFFICIENT_EVIDENCE
-has no settlement` guard. 002-v2 also has a duplicate-release attempt
-(`0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649`)
+has no settlement` guard. 002-v2 also has a duplicate-release check
+([`0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649`](https://explorer-bradbury.genlayer.com/tx/0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649))
 rejected 5/5 DISAGREE, moving no value.
 
 Case 002-v2's ruling, derived by validators from the evidence alone:
@@ -370,10 +371,12 @@ npm run lint && npm run typecheck && npm test && npm run build
 ## Repository structure
 
 ```
-contracts/uptime_bond.py     the intelligent contract (659 lines)
+contracts/uptime_bond.py     the intelligent contract (749 lines)
+contracts/probes/            eoa_transfer_probe.py — the live EOA-payout probe
 evidence/                    four commit-pinned fixture cases + schema
-tests/direct/                195 hermetic Direct Mode tests
-deploy/scripts/              gl.mjs (tx driver), lifecycle.mjs (harness), lib.mjs
+tests/direct/                201 hermetic Direct Mode tests
+tests/integration/           live Bradbury balance checks (opt-in: -m integration)
+deploy/scripts/              gl.mjs (tx driver), lifecycle.mjs (harness), lib.mjs, balances.mjs
 deploy/bradbury/             deployment + transaction records per case
 frontend/                    React/TS/Vite dApp on port 3000
 ```
@@ -405,30 +408,55 @@ frontend/                    React/TS/Vite dApp on port 3000
 
 Stated plainly rather than glossed:
 
-- **Two of four cases completed a full ruling and settlement** (002 and 003).
-  Cases 001 and 004 were deployed, funded and driven as far as Bradbury's
-  ~30-minute-per-transaction cadence allowed within the session. Their live
-  status is in `deploy/bradbury/`.
-- **Settlement transfers had not finalized** when this was written. Both
-  `release()` transactions are ACCEPTED with 5/5 AGREE and state is RESOLVED /
-  CONSENSUS_RULING, but transfers use `on="finalized"` — so the GEN had
-  correctly *not* moved yet. That is the contract behaving as designed, not a
-  failure, but the wallet-level payout is not claimed as confirmed here.
-- **Wallet deltas include gas.** The provider balance moved 2.0 → 1.99956 GEN
-  purely from `accept_sla` gas across three contracts; no escrow had landed.
-  Gas and settlement must not be conflated when reading balances.
-- **Live negative/authorization checks were not run on Bradbury.** They are
-  covered thoroughly in Direct Mode (access control, duplicate funding,
-  premature release, duplicate release), but running them live would require a
-  separate deployment and ~30 minutes per reverting transaction. Not claimed as
-  live-tested.
+- **All four cases are settled and verified on the fixed payout path.** Escrow
+  movement was measured on-chain across each release finalization (records under
+  `deploy/bradbury/<case>-v2/99-final-state.json`):
+  - **001-v2 `NO_BREACH`** — provider received **0.1 GEN**, contract balance **zero**.
+  - **002-v2 `PARTIAL_REFUND`** — customer received **0.025 GEN**, provider **0.075 GEN**, contract balance **zero**.
+  - **003-v2 `FULL_REFUND`** — customer received **0.1 GEN**, contract balance **zero**.
+  - **004-v2 `INSUFFICIENT_EVIDENCE`** — automatic `release()` **rejected** (5/5 DISAGREE), **0.1 GEN remains custodied**, by design.
+- **Two rulings finalized on weaker 3/5 validator margins.** 001-v2 ruled with 2
+  validator `TIMEOUT` and 003-v2 with 2 `DETERMINISTIC_VIOLATION`, both reaching
+  the correct outcome on a 3/5 AGREE majority. That is validator-side divergence
+  under load, not a contract fault, but it is a thinner margin than 002-v2's
+  clean 5/5 and is worth watching.
+- **`get_settlement_status` reads a non-final balance.** Between a release being
+  ACCEPTED and finalizing it correctly reports `payout_complete: false`, but a
+  chain reorg before finality could still change the settled outcome. The view
+  reflects best-known, not irreversible, state.
+- **Bradbury was congested throughout and needs supervised retries.** The node
+  intermittently rejects submissions at the consensus contract (before any tx
+  hash exists, so nothing commits) and emits `l1_sender_commit` backpressure and
+  `TIMEOUT` / `DETERMINISTIC_VIOLATION` votes. Every such revert left balances
+  correct and no orphaned state, and a retry cleared it — but runs must be
+  watched, not fired and forgotten.
+- **Cases must be driven serially — one signer.** All cases sign with the same
+  customer account; running them concurrently lets a later submission land while
+  an earlier one is unfinalized and get reverted. True parallel execution would
+  need a separate signer per case. The harness README documents this.
+- **SDK drift is an unpinned hazard.** Two breakages surfaced this session from
+  the globally-installed `genlayer-js` (a dropped `CalldataAddress` export; a
+  changed write path). Nothing pins the SDK version, so tooling can break
+  between sessions.
+- **Wallet deltas include gas.** A settling party that signs `rule` / `release`
+  pays that gas, so its *net* balance change is smaller than the gross transfer.
+  Payout amounts above are the gross escrow movement (contract balance to zero,
+  counterpart delta), derived by conservation, not the signer's net delta. Gas
+  and settlement must not be conflated when reading balances.
+- **Some live negative checks were run, others remain Direct-Mode only.** The
+  duplicate-release guard (002-v2) and the `INSUFFICIENT_EVIDENCE` no-settlement
+  guard (004-v2) were exercised live and reverted as expected. The remaining
+  access-control and premature-state reverts are covered thoroughly in Direct
+  Mode but not re-run live, since each would cost a separate deployment and
+  ~30 minutes per reverting transaction.
 - **Deadlock deadlines were not exercised in real time.** The minimum window is
   1 hour and deployments use 24. Deterministic time progression is covered in
   Direct Mode via `warp`. A dedicated short-window deployment would be needed to
   demonstrate it live.
 - **The frontend was not verified in a browser.** It builds, typechecks, lints,
   passes its tests, and serves on port 3000, and its data layer reads the live
-  contracts — but no browser session confirmed the rendered UI.
+  contracts — but no browser session confirmed the rendered UI. (The README on
+  the repository page *was* render-checked; the dApp itself was not.)
 - **The GenLayer CLI cannot call payable methods.** Both 0.39.1 and 0.39.2
   hardcode `value: 0n`, which is why `deploy/scripts/` exists.
 - **`genlayer schema` and `genlayer code` are Studio-only.** Deployed source was
