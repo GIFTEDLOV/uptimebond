@@ -1,0 +1,26 @@
+{
+  "case": "case-003-full-refund-v2",
+  "contract": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+  "state": {
+    "breached_clause_ids": [
+      "SLA-1",
+      "SLA-4"
+    ],
+    "customer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "dispute_opened_at": 1784755751,
+    "escrow_atto": "100000000000000000",
+    "incident_window": "NimbusAPI May 2026 major unannounced outage dispute",
+    "insufficient_evidence_ruled_at": 0,
+    "maintenance_qualified": false,
+    "outcome": "FULL_REFUND",
+    "provider": "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc",
+    "refund_bps": 10000,
+    "resolution_mode": "",
+    "ruling_reason": "The independent monitor, as the primary evidence, measured a monthly uptime of 96.8%, which is below the 99.50% commitment in clause SLA-1 and also below the 98.00% threshold in clause SLA-4. No downtime was excluded as qualified maintenance, as the maintenance feed confirms no windows were announced. Therefore, a full refund is required.",
+    "settlement_pending": false,
+    "settlement_proposer": "0x0000000000000000000000000000000000000000",
+    "settlement_refund_bps": 0,
+    "status": "RULED"
+  },
+  "read_at": "2026-07-23T04:00:22.671Z"
+}

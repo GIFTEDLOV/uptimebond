@@ -1,0 +1,25 @@
+{
+  "stage": "OBSERVED_RECOVERED",
+  "case": "case-003-full-refund-v2",
+  "step": "05-release",
+  "method": "release",
+  "contract": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+  "signer_account": "deployer",
+  "signer_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "value_wei": "0",
+  "tx": "0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a",
+  "submitted_at": "2026-07-23T04:00:24.787Z",
+  "warning": "Receipt not yet observed. Verify on-chain state before any retry.",
+  "classification": {
+    "ok": true,
+    "consensus_status": "FINALIZED",
+    "consensus_result": "AGREE",
+    "execution_result": "FINISHED_WITH_RETURN",
+    "validator_tally": {
+      "AGREE": 5
+    },
+    "note": "Process killed mid-wait; receipt recovered from persisted hash. Release is single-shot and was already accepted, so it was never resubmitted."
+  },
+  "observed_at": "2026-07-23T08:44:32.812293+00:00"
+}

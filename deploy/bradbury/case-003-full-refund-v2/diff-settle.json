@@ -1,0 +1,26 @@
+{
+  "diff": {
+    "from": "003-before-settle",
+    "to": "after-settle"
+  },
+  "rows": {
+    "0xDF1A19ACBE068373f067EF6E226EE564032f4676": {
+      "before_wei": "100000000000000000",
+      "after_wei": "0",
+      "delta_wei": "-100000000000000000",
+      "delta_gen": "-0.100000000000000000"
+    },
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
+      "before_wei": "20211889428678636994",
+      "after_wei": "20311627210233219794",
+      "delta_wei": "99737781554582800",
+      "delta_gen": "0.099737781554582800"
+    },
+    "0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc": {
+      "before_wei": "2078184823940934600",
+      "after_wei": "2078184823940934600",
+      "delta_wei": "0",
+      "delta_gen": "0.000000000000000000"
+    }
+  }
+}

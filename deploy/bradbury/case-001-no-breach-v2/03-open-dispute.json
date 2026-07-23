@@ -1,0 +1,14 @@
+{
+  "stage": "SUBMITTED_AWAITING_RECEIPT",
+  "case": "case-001-no-breach-v2",
+  "step": "03-open-dispute",
+  "method": "open_dispute",
+  "contract": "0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe",
+  "signer_account": "deployer",
+  "signer_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "value_wei": "0",
+  "tx": "0x5ab29ae20127e9cefb60707e818f2b135bf2f1e396b559190f6732b12d43e61b",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0x5ab29ae20127e9cefb60707e818f2b135bf2f1e396b559190f6732b12d43e61b",
+  "submitted_at": "2026-07-23T08:45:33.013Z",
+  "warning": "Receipt not yet observed. Verify on-chain state before any retry."
+}

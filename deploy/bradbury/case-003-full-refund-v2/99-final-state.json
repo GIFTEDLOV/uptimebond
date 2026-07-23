@@ -1,0 +1,23 @@
+{
+  "case": "case-003-full-refund-v2",
+  "contract": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+  "expected": {
+    "outcome": "FULL_REFUND",
+    "refund_bps": 10000,
+    "customer_atto": "100000000000000000",
+    "provider_atto": "0",
+    "contract_balance_after_atto": "0"
+  },
+  "verified": {
+    "payout_confirmed_on_chain": true,
+    "rule_tx": "0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae",
+    "rule_consensus": "FINALIZED, FULL_REFUND, votes AGREE:3 DETERMINISTIC_VIOLATION:2 (majority AGREE, finalized correctly)",
+    "release_tx": "0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a",
+    "release_consensus": "FINALIZED, AGREE:5",
+    "gross_customer_transfer_atto": "100000000000000000",
+    "gross_provider_transfer_atto": "0",
+    "contract_balance_after_atto": "0",
+    "note": "Contract went 0.1 GEN -> 0 and provider delta 0, so by conservation the customer received exactly 0.1 GEN gross. Customer net delta is smaller only because the customer signed rule+release and paid gas."
+  },
+  "read_at": "2026-07-23T08:44:32.826967+00:00"
+}
