@@ -1,0 +1,47 @@
+{
+  "stage": "UNKNOWN_STILL_PENDING",
+  "case": "case-003-full-refund-v2",
+  "step": "03-open-dispute",
+  "method": "open_dispute",
+  "contract": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+  "tx": "0x745c051faaa75162db67d332c8993ceaa372c025a5781c4aae7cc53808153991",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0x745c051faaa75162db67d332c8993ceaa372c025a5781c4aae7cc53808153991",
+  "last_seen": {
+    "hash": "0x745c051faaa75162db67d332c8993ceaa372c025a5781c4aae7cc53808153991",
+    "status": "accepted",
+    "execution_result": "FINISHED_WITH_RETURN",
+    "submission_timestamp": 1784755751,
+    "finalization_timestamp": 0,
+    "leader": "0x58a7b7ac6Cb01843e4e5af117C551E59449E0F49",
+    "validators": [
+      "0x58a7b7ac6Cb01843e4e5af117C551E59449E0F49",
+      "0xE8fdefdfe18fD8E5B0d576b7CcfC5a29CE43fD7f",
+      "0x7538369A22a176afFccb6B273eedfbb92780bf22",
+      "0x992E8D62263eD1Fe2E14FfB11aDf1080edBe4b5a",
+      "0xb4Fb7ADc6877a6A16bd131c7c9270834bD3DEf34"
+    ],
+    "queue": {
+      "recipient": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+      "current_queue_type": "accepted",
+      "pending_slot": 3,
+      "current_slot": null,
+      "pending_queue_count": 0,
+      "current_position": null,
+      "transactions_ahead": null,
+      "transactions_ahead_at_submission": null,
+      "queue_length_at_submission": null,
+      "created_timestamp": null,
+      "created_block": null,
+      "created_rollup_transaction_hash": null,
+      "eligible_timestamp": 1784755751,
+      "eligible_block": 15184091,
+      "eligible_rollup_transaction_hash": "0x31b9cc9a91a6eb1921ed81b8cb9b251e1c9c400660789984d92e617fb4963c55",
+      "selected_activator": "0x8E7765267023F88d4155d52F4ce2319aDDf1dc33"
+    },
+    "value": "0",
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "to": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+    "deployed_contract_address": null
+  },
+  "checked_at": "2026-07-23T03:23:30.200Z"
+}

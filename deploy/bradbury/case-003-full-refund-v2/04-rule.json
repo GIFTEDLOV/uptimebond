@@ -1,0 +1,14 @@
+{
+  "stage": "SUBMITTED_AWAITING_RECEIPT",
+  "case": "case-003-full-refund-v2",
+  "step": "04-rule",
+  "method": "rule",
+  "contract": "0xDF1A19ACBE068373f067EF6E226EE564032f4676",
+  "signer_account": "deployer",
+  "signer_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "value_wei": "0",
+  "tx": "0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae",
+  "submitted_at": "2026-07-23T03:26:42.899Z",
+  "warning": "Receipt not yet observed. Verify on-chain state before any retry."
+}
