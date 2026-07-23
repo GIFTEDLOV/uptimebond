@@ -1,0 +1,124 @@
+{
+  "action": "write",
+  "method": "release",
+  "contract": "0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d",
+  "signer_account": "deployer",
+  "signer_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "value_wei": "0",
+  "tx": "0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47",
+  "explorer": "https://explorer-bradbury.genlayer.com/tx/0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47",
+  "classification": {
+    "ok": false,
+    "consensus_status": "ACCEPTED",
+    "consensus_result": "AGREE",
+    "execution_result": "FINISHED_WITH_ERROR",
+    "validator_votes": [
+      "DISAGREE",
+      "DISAGREE",
+      "DISAGREE",
+      "DISAGREE",
+      "DISAGREE"
+    ],
+    "validator_tally": {
+      "DISAGREE": 5
+    },
+    "validators": [
+      "0xB7551beF37a05995218f9a1BB7A93e5B6705f535",
+      "0x77a07271abB443F55be19c357AA35206BeB63E1d",
+      "0x8E7765267023F88d4155d52F4ce2319aDDf1dc33",
+      "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21",
+      "0x0c526A6af46A038E31dA21C123756Ab2D75f06Bc"
+    ],
+    "leader_index": "1",
+    "votes_committed": "5",
+    "votes_revealed": "5"
+  },
+  "submitted_at": "2026-07-23T18:26:01.800Z",
+  "receipt": {
+    "currentTimestamp": "1784831161",
+    "sender": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "recipient": "0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d",
+    "initialRotations": "3",
+    "txSlot": "5",
+    "createdTimestamp": "1784831107",
+    "lastVoteTimestamp": "1784831159",
+    "randomSeed": "0x20b4ce6714e31eb11eb3ec9ff55622fde1b40d7af31cd2b7cb330a79cf4fa4e7",
+    "result": 1,
+    "txExecutionHash": "0xf83957c9615c73e88f64a97dea2b7627401cfe50c8a70613303f2050aff618a7",
+    "txCalldata": "0xd2900e066d6574686f643c72656c6561736500",
+    "eqBlocksOutputs": "0xc786706164646564",
+    "queueType": 0,
+    "queuePosition": "0",
+    "activator": "0x0c526A6af46A038E31dA21C123756Ab2D75f06Bc",
+    "lastLeader": "0x77a07271abB443F55be19c357AA35206BeB63E1d",
+    "status": 5,
+    "txId": "0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47",
+    "readStateBlockRange": {
+      "activationBlock": "15246102",
+      "processingBlock": "15246106",
+      "proposalBlock": "15246110"
+    },
+    "numOfRounds": "0",
+    "lastRound": {
+      "round": "0",
+      "leaderIndex": "1",
+      "votesCommitted": "5",
+      "votesRevealed": "5",
+      "appealBond": "0",
+      "rotationsLeft": "3",
+      "result": 1,
+      "roundValidators": [
+        "0xB7551beF37a05995218f9a1BB7A93e5B6705f535",
+        "0x77a07271abB443F55be19c357AA35206BeB63E1d",
+        "0x8E7765267023F88d4155d52F4ce2319aDDf1dc33",
+        "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21",
+        "0x0c526A6af46A038E31dA21C123756Ab2D75f06Bc"
+      ],
+      "validatorVotes": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "validatorVotesHash": [
+        "0xd5fe206f53bf4a928e4bdc9bdc425e4a04212f61112aa8c356fd2f44eef447cd",
+        "0xe4f0305b26a8e5fee1a8dfe719cf45c2d91d84323a43b20736e374bc0479b788",
+        "0xd21f78fd38035c0bf65f1e6fdf09922d9fa9749d2ea8d6dcb487043b98c17f1f",
+        "0x7f49e7c5be026a41c2e80899405a2bf2bef0d21ecc2affadeff73adaf9ce438f",
+        "0xa416fff2cd41e857df40bc0bac098dba6dd89b868f124440f9d048b223531514"
+      ],
+      "validatorResultHash": [
+        "0x7e4444dddb44d745b3024e27ac3e226a4c5ede7feda7feb67fe1f685f9be621e",
+        "0x7e4444dddb44d745b3024e27ac3e226a4c5ede7feda7feb67fe1f685f9be621e",
+        "0x7e4444dddb44d745b3024e27ac3e226a4c5ede7feda7feb67fe1f685f9be621e",
+        "0x7e4444dddb44d745b3024e27ac3e226a4c5ede7feda7feb67fe1f685f9be621e",
+        "0x7e4444dddb44d745b3024e27ac3e226a4c5ede7feda7feb67fe1f685f9be621e"
+      ],
+      "validatorVotesName": [
+        "DISAGREE",
+        "DISAGREE",
+        "DISAGREE",
+        "DISAGREE",
+        "DISAGREE"
+      ]
+    },
+    "consumedValidators": [
+      "0xB7551beF37a05995218f9a1BB7A93e5B6705f535",
+      "0x77a07271abB443F55be19c357AA35206BeB63E1d",
+      "0x8E7765267023F88d4155d52F4ce2319aDDf1dc33",
+      "0x470AAa7DE37ff3E1C2b38eD9096263ca0d541F21",
+      "0x0c526A6af46A038E31dA21C123756Ab2D75f06Bc"
+    ],
+    "txExecutionResult": 2,
+    "txData": "0xd2900e066d6574686f643c72656c6561736500",
+    "txDataDecoded": {
+      "leaderOnly": false,
+      "type": "call"
+    },
+    "numOfInitialValidators": "3",
+    "status_name": "ACCEPTED",
+    "resultName": "AGREE",
+    "txExecutionResultName": "FINISHED_WITH_ERROR"
+  }
+}

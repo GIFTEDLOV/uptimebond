@@ -1,0 +1,10 @@
+{
+  "label": "004-after-release-attempt",
+  "read_at": "2026-07-23T18:28:52.099Z",
+  "balances": {
+    "0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d": "100000000000000000"
+  },
+  "gen": {
+    "0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d": "0.100000000000000000"
+  }
+}

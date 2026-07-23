@@ -1,0 +1,22 @@
+{
+  "case": "case-004-insufficient-evidence-v2",
+  "contract": "0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d",
+  "expected": {
+    "outcome": "INSUFFICIENT_EVIDENCE",
+    "settleable": false,
+    "release_must_revert": true,
+    "contract_balance_after_atto": "100000000000000000",
+    "note": "No automatic settlement by design. Escrow stays custodied pending mutual settlement, native appeal, or the deadlock fallback."
+  },
+  "verified": {
+    "ruling_outcome": "INSUFFICIENT_EVIDENCE",
+    "rule_tx": "0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3",
+    "rule_consensus": "FINALIZED, INSUFFICIENT_EVIDENCE, votes AGREE:4 TIMEOUT:1",
+    "release_attempt_tx": "0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47",
+    "release_reverted": true,
+    "release_consensus": "ACCEPTED, execution FINISHED_WITH_ERROR, DISAGREE:5 \u2014 the \"Outcome INSUFFICIENT_EVIDENCE has no settlement\" guard",
+    "contract_balance_after_atto": "100000000000000000",
+    "note": "release() correctly reverts; the 0.1 GEN escrow remains fully custodied. This confirms the payout fix did not disturb the non-settling branch: settleable outcomes now pay via EVM external messages, and the unsettleable outcome still refuses to pay at all."
+  },
+  "read_at": "2026-07-23T18:33:14.571913+00:00"
+}
