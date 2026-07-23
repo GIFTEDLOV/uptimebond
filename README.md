@@ -173,6 +173,17 @@ Settlement floors the customer refund and gives the provider the exact
 remainder, so the two always sum back to the escrow with no leakage regardless
 of divisibility.
 
+Both parties are externally owned accounts, so each payout leaves the contract
+through an **EVM external message** (`@gl.evm.contract_interface` →
+`emit_transfer`), which executes at **finalization** — not the internal GenVM
+contract-message path, which is inert against an EOA and moves no value. A
+settled agreement therefore reads `RESOLVED` with the payout *queued* for a few
+minutes to tens of minutes before the escrow actually leaves; `get_settlement_status`
+reports `payout_complete` from the live contract balance, never from status
+alone. This distinction is the fix in commit `6e29b67`; the earlier
+implementation is documented in
+[`deploy/bradbury/probe-eoa-transfer/RESULT.md`](deploy/bradbury/probe-eoa-transfer/RESULT.md).
+
 ### Appeals and finality
 
 There is **no custom AI re-ruling method**. Parties use GenLayer's native
@@ -234,54 +245,54 @@ node deploy/scripts/lifecycle.mjs --case <id> --status    # live state
 
 ## Bradbury deployments
 
-Chain 4221 · [explorer](https://explorer-bradbury.genlayer.com/) · all
-deployments from source commit `ad00182`.
+Network **GenLayer Bradbury Testnet**, chain ID **4221** ·
+[explorer](https://explorer-bradbury.genlayer.com/).
 
-| Case | Expected | Contract | Deploy tx | Ruling tx | Final outcome |
-|---|---|---|---|---|---|
-| 002 partial refund | `PARTIAL_REFUND` 2500 | [`0x4dc6b188…19988`](https://explorer-bradbury.genlayer.com/address/0x4dc6b188b3025f92F133515c3041cbc4E2019988) | `0xecf36d39…cb46a4` | `0x8f1fc211…611001` | **`PARTIAL_REFUND` 2500 bps — RESOLVED ✓** |
-| 003 full refund | `FULL_REFUND` 10000 | [`0x7EA49E78…0195b7`](https://explorer-bradbury.genlayer.com/address/0x7EA49E783B4839a20c39F77FFe62b3beF10195b7) | `0xd75a5268…c63a20` | `0x7d171a61…9bfd94` | **`FULL_REFUND` 10000 bps — RESOLVED ✓** |
-| 001 no breach | `NO_BREACH` 0 | [`0xE64Dcc5E…9dDBAC`](https://explorer-bradbury.genlayer.com/address/0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC) | `0xfbbf49f8…1002dc` | in flight | DISPUTED — ruling in flight |
-| 004 insufficient | `INSUFFICIENT_EVIDENCE` | [`0xb0C263bE…bb67c0`](https://explorer-bradbury.genlayer.com/address/0xb0C263bEf959E640060045D47659582D23bb67c0) | `0xfe082e17…33df0e` | not reached | AWAITING_PROVIDER_ACCEPTANCE |
+Contract source: the fixed payout path at commit **`6e29b67`** (`contracts/uptime_bond.py`,
+unchanged since). Evidence sources pinned at commit **`ad00182`**. Each payout
+leaves the contract through an EVM external message that executes at
+finalization — see [Payout model](#payout-model) and
+[`deploy/bradbury/probe-eoa-transfer/RESULT.md`](deploy/bradbury/probe-eoa-transfer/RESULT.md).
 
-**⚠️ `0xB82f70950BbEfBC6829c463A5922Bb1B6333C637` is a failed ghost contract
-from the pre-`ad00182` constructor bug. Never fund or interact with it.**
+### Verified agreements (fixed payout path) ✓
 
-### Case 003 — full refund, also verified
+Every case below was driven `deploy → fund → accept → dispute → rule → release`
+and its escrow movement was measured on-chain across the release finalization
+boundary. Full records under `deploy/bradbury/<case>/99-final-state.json`.
 
-Ruling tx `0x7d171a61…9bfd94`, release tx `0xb6d5f52a…f5bd88`, both 5/5 AGREE:
-
-```
-outcome               : FULL_REFUND         (expected FULL_REFUND ✓)
-refund_bps            : 10000               (expected 10000 ✓)
-breached_clause_ids   : ["SLA-1", "SLA-4"]
-resolution_mode       : CONSENSUS_RULING
-```
-
-96.80% uptime is below the 98.00% floor, so SLA-4's full credit applies —
-derived by the validators from the evidence alone.
-
-### Case 002 — verified end to end
-
-The headline result. Real validators, real evidence fetched over HTTP, real
-escrow:
-
-| Step | Tx | Consensus | Execution |
+| Case | Outcome | Contract | Escrow settlement (measured) |
 |---|---|---|---|
-| deploy | `0xecf36d39…cb46a4` | FINALIZED / AGREE 5/5 | FINISHED_WITH_RETURN |
-| `fund` (1 GEN) | `0x9a723f95…94cd4f8` | ACCEPTED / AGREE 5/5 | FINISHED_WITH_RETURN |
-| `accept_sla` | `0x0bd14b19…c04761` | ACCEPTED / AGREE 5/5 | FINISHED_WITH_RETURN |
-| `open_dispute` | `0x2da79b1e…c6130e` | ACCEPTED | FINISHED_WITH_RETURN |
-| `rule` | `0x8f1fc211…611001` | ACCEPTED, 5 validators | FINISHED_WITH_RETURN |
+| **001-v2** no breach | `NO_BREACH` | [`0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe`](https://explorer-bradbury.genlayer.com/address/0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe) | provider received **0.1 GEN**, customer 0, **contract balance 0** |
+| **002-v2** partial refund | `PARTIAL_REFUND` 2500 bps | [`0x965C9B454867273F612BD48d181Ec418391750d5`](https://explorer-bradbury.genlayer.com/address/0x965C9B454867273F612BD48d181Ec418391750d5) | customer received **0.025 GEN**, provider received **0.075 GEN**, **contract balance 0** |
+| **003-v2** full refund | `FULL_REFUND` 10000 bps | [`0xDF1A19ACBE068373f067EF6E226EE564032f4676`](https://explorer-bradbury.genlayer.com/address/0xDF1A19ACBE068373f067EF6E226EE564032f4676) | customer received **0.1 GEN**, provider 0, **contract balance 0** |
+| **004-v2** insufficient evidence | `INSUFFICIENT_EVIDENCE` | [`0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d`](https://explorer-bradbury.genlayer.com/address/0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d) | automatic `release()` **rejected**, **0.1 GEN remains custodied** |
 
-Validators returned:
+Each agreement was funded with **0.1 GEN**. Case 004 is the inverse gate:
+`INSUFFICIENT_EVIDENCE` has no automatic settlement, so `release()` reverts and
+the escrow stays in custody — proving the payout fix pays settleable outcomes
+without turning the unsettleable one into a payout.
 
-```
-outcome               : PARTIAL_REFUND      (expected PARTIAL_REFUND ✓)
-refund_bps            : 2500                (expected 2500 ✓)
-maintenance_qualified : false               (expected false ✓)
-breached_clause_ids   : ["SLA-1"]
-```
+**Transactions** (all hashes are full; open at
+`https://explorer-bradbury.genlayer.com/tx/<hash>`):
+
+| Case | Deploy tx | Ruling tx | Release tx |
+|---|---|---|---|
+| 001-v2 | `0x846a227db36d4e3e87199aa1bafebcb09b0bfb056be6f7a3939dcfe2805129a3` | `0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c` | `0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d` |
+| 002-v2 | `0x28215db5fd84ee69154ce6a368d8b6023cf1fb848f623e2e33139eae3bf6893c` | `0x2c0ebf63ede17d46da4566133abd9bffb8d31fd2f240549df905506ee2165e97` | `0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064` |
+| 003-v2 | `0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1` | `0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae` | `0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a` |
+| 004-v2 | `0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945` | `0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3` | `0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47` (reverted, by design) |
+
+Consensus notes: 002-v2 ruled and released at a clean 5/5 AGREE. 001-v2 and
+003-v2 ruled on 3/5 majorities (with 2 validator `TIMEOUT` and 2
+`DETERMINISTIC_VIOLATION` respectively) and released 5/5 AGREE — correct
+outcomes, weaker margins from validator-side re-execution under node load, not
+contract faults. 004-v2's `release()` was ACCEPTED by consensus but execution
+`FINISHED_WITH_ERROR` with 5/5 DISAGREE — the `Outcome INSUFFICIENT_EVIDENCE
+has no settlement` guard. 002-v2 also has a duplicate-release attempt
+(`0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649`)
+rejected 5/5 DISAGREE, moving no value.
+
+Case 002-v2's ruling, derived by validators from the evidence alone:
 
 > "The independent monitor is the primary evidence and reports an uptime of
 > 99.1%, which is below the 99.5% SLA commitment. The 300-minute maintenance
@@ -290,15 +301,29 @@ breached_clause_ids   : ["SLA-1"]
 > all 402 minutes of downtime count, resulting in a breach that falls within
 > the 98.00% to 99.49% range for a partial refund per SLA-3."
 
-The validators derived the pivot the fixture was built around — the 2-hour
-notice failing SLA-2's 24-hour bar — entirely from the evidence.
+### ⚠️ Deprecated broken-payout deployments — do not use as demos
 
-**One documented deviation:** `breached_clause_ids` is `["SLA-1"]`, where the
-case README anticipated `["SLA-1", "SLA-2"]`. The validators' reading is
-defensible and arguably better: SLA-1 (the uptime commitment) is the clause
-*breached*; SLA-2 is the exclusion *test* that failed, not itself a breach. The
-decision fields that control money are exactly as expected. This is recorded as
-a deviation rather than quietly reframed as a success.
+These four contracts were deployed **before commit `6e29b67`**. Their `_settle`
+paid EOAs through an internal GenVM `PostMessage`, which is inert against an
+externally owned account: it moved no value while reporting success. The ruling
+on each is valid and consensus-backed; **only the payout is broken.** The
+contracts are immutable and `release()` is single-shot, so the escrow **cannot
+be recovered** by any further call. Do not fund them, do not call `release`
+again, and do not present them as working demonstrations.
+
+| Contract | Case | On-chain state | Escrow (stranded) |
+|---|---|---|---|
+| [`0x4dc6b188b3025f92F133515c3041cbc4E2019988`](https://explorer-bradbury.genlayer.com/address/0x4dc6b188b3025f92F133515c3041cbc4E2019988) | 002 partial refund | RESOLVED, `PARTIAL_REFUND` 2500 (paid nobody) | **1 GEN** — superseded by 002-v2 |
+| [`0x7EA49E783B4839a20c39F77FFe62b3beF10195b7`](https://explorer-bradbury.genlayer.com/address/0x7EA49E783B4839a20c39F77FFe62b3beF10195b7) | 003 full refund | RESOLVED, `FULL_REFUND` 10000 (paid nobody) | **0.1 GEN** |
+| [`0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC`](https://explorer-bradbury.genlayer.com/address/0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC) | 001 no breach | DISPUTED (never settled) | **0.1 GEN** |
+| [`0xb0C263bEf959E640060045D47659582D23bb67c0`](https://explorer-bradbury.genlayer.com/address/0xb0C263bEf959E640060045D47659582D23bb67c0) | 004 insufficient evidence | AWAITING_PROVIDER_ACCEPTANCE (never settled) | **0.1 GEN** |
+
+Total permanently stranded: **1.3 GEN** of testnet funds. Treat as lost absent
+an official protocol recovery mechanism.
+
+**⚠️ `0xB82f70950BbEfBC6829c463A5922Bb1B6333C637` is a separate failed ghost
+contract from the pre-`ad00182` constructor bug. Never fund or interact with
+it.**
 
 ---
 
