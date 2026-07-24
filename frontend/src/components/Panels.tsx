@@ -1,8 +1,158 @@
-import type { AgreementState, DeadlockStatus, TxTracker } from '../chain';
+import type { AgreementState, DeadlockStatus, SettlementStatus, TxTracker } from '../chain';
 import { bpsPct, fmtGen, shortAddr } from '../chain';
 import { EXPLORER, SLA_CLAUSES, evidenceUrls, type AgreementConfig } from '../config';
 
 export type Role = 'customer' | 'provider' | 'observer' | 'disconnected';
+
+/* ------------------------------------------------------------ status chip */
+
+const STATUS_LABEL: Record<string, string> = {
+  AWAITING_FUNDING: 'Awaiting funding',
+  AWAITING_PROVIDER_ACCEPTANCE: 'Awaiting acceptance',
+  ACTIVE: 'Active',
+  DISPUTED: 'Disputed',
+  RULED: 'Ruled',
+  RESOLVED: 'Resolved',
+};
+
+export function StatusChip({ status }: { status: string }) {
+  return (
+    <span className={`status-chip status-${status.toLowerCase()}`}>
+      <span className="sdot" aria-hidden="true" />
+      {STATUS_LABEL[status] ?? status}
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------- settlement */
+
+function outcomeLabel(o: string) {
+  return o.replaceAll('_', ' ');
+}
+
+/** The headline panel: outcome, exact payout split, and whether the escrow has
+ *  actually left the contract — read from the live balance, never inferred from
+ *  status alone. */
+export function Settlement({
+  st, settlement,
+}: { st: AgreementState; settlement: SettlementStatus | null }) {
+  const oc = st.outcome;
+  if (!oc) {
+    return (
+      <div className="card settlement">
+        <h2>Settlement</h2>
+        <div className="settle-outcome oc-text-insufficient_evidence">Not yet ruled</div>
+        <p className="settle-sub">
+          The escrow of <strong>{fmtGen(st.escrow_atto)} GEN</strong> is held pending the
+          agreement's outcome.
+        </p>
+      </div>
+    );
+  }
+
+  const escrow = BigInt(st.escrow_atto);
+  const bps = BigInt(st.refund_bps);
+  const insufficient = oc === 'INSUFFICIENT_EVIDENCE';
+
+  // Prefer the contract's own settlement view; fall back to derived amounts.
+  const customerAtto = settlement && st.status === 'RESOLVED'
+    ? BigInt(settlement.expected_customer_atto)
+    : (escrow * bps) / 10000n;
+  const providerAtto = settlement && st.status === 'RESOLVED'
+    ? BigInt(settlement.expected_provider_atto)
+    : escrow - (escrow * bps) / 10000n;
+  const balance = settlement ? BigInt(settlement.contract_balance_atto) : escrow;
+
+  // Payout state, derived from ground truth (the live balance), not status.
+  let badge: { cls: string; text: string };
+  if (insufficient) {
+    badge = { cls: 'pay-custodied', text: 'Escrow custodied' };
+  } else if (settlement?.payout_complete) {
+    badge = { cls: 'pay-final', text: 'Payout finalized' };
+  } else if (st.status === 'RESOLVED') {
+    badge = { cls: 'pay-queued', text: 'Payout queued' };
+  } else if (st.status === 'RULED') {
+    badge = { cls: 'pay-queued', text: 'Ruling final — release pending' };
+  } else {
+    badge = { cls: 'pay-custodied', text: 'In escrow' };
+  }
+
+  return (
+    <div className="card settlement">
+      <h2>Settlement</h2>
+      <div className="settle-head">
+        <div>
+          <div className={`settle-outcome oc-text-${oc.toLowerCase()}`}>{outcomeLabel(oc)}</div>
+          <div className="settle-sub">
+            {insufficient
+              ? 'Evidence insufficient for a financial ruling — no automatic payout.'
+              : `Customer refund ${bpsPct(st.refund_bps)} (${st.refund_bps} bps) · provider share ${bpsPct(10000 - st.refund_bps)}`}
+          </div>
+        </div>
+        <span className={`payout-badge ${badge.cls}`}>
+          <span className="pb-dot" aria-hidden="true" />
+          {badge.text}
+        </span>
+      </div>
+
+      <div className="tiles">
+        {insufficient ? (
+          <>
+            <div className="tile">
+              <div className="t-label">Customer</div>
+              <div className="t-val">0<span className="unit">GEN</span></div>
+              <div className="t-note">no automatic refund</div>
+            </div>
+            <div className="tile">
+              <div className="t-label">Provider</div>
+              <div className="t-val">0<span className="unit">GEN</span></div>
+              <div className="t-note">no automatic payout</div>
+            </div>
+            <div className="tile accent">
+              <div className="t-label">Escrow custodied</div>
+              <div className="t-val">{fmtGen(balance)}<span className="unit">GEN</span></div>
+              <div className="t-note">held pending settlement</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={`tile ${customerAtto > 0n ? 'ok' : ''}`}>
+              <div className="t-label">Customer receives</div>
+              <div className="t-val">{fmtGen(customerAtto)}<span className="unit">GEN</span></div>
+              <div className="t-note">{bpsPct(st.refund_bps)} of escrow</div>
+            </div>
+            <div className={`tile ${providerAtto > 0n ? 'ok' : ''}`}>
+              <div className="t-label">Provider receives</div>
+              <div className="t-val">{fmtGen(providerAtto)}<span className="unit">GEN</span></div>
+              <div className="t-note">{bpsPct(10000 - st.refund_bps)} of escrow</div>
+            </div>
+            <div className={`tile ${balance === 0n ? 'zero' : ''}`}>
+              <div className="t-label">Contract balance</div>
+              <div className="t-val">{fmtGen(balance)}<span className="unit">GEN</span></div>
+              <div className="t-note">{balance === 0n ? 'fully distributed' : 'still held on-chain'}</div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <p className="settle-foot">
+        {insufficient ? (
+          <>Automatic <code>release()</code> is rejected by consensus for this outcome; the escrow
+          stays custodied pending a mutual settlement, a native appeal, or the deadlock fallback.</>
+        ) : settlement?.payout_complete ? (
+          <>Payout confirmed on-chain: the contract balance has reached zero. Amounts are the gross
+          escrow transfer, before each party's own gas.</>
+        ) : st.status === 'RESOLVED' ? (
+          <>Payout is <strong>queued</strong>. Settlement transfers are EVM external messages that
+          execute at finalization; the contract still holds {fmtGen(balance)} GEN until then.</>
+        ) : (
+          <>The ruling is final. Either party may now call <code>release()</code> to distribute the
+          escrow; transfers execute at finalization.</>
+        )}
+      </p>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ status */
 
@@ -53,11 +203,14 @@ export function Overview({
 }: { cfg: AgreementConfig; st: AgreementState; role: Role; account?: string }) {
   return (
     <div className="card">
-      <h2>Agreement</h2>
+      <div className="settle-head" style={{ marginBottom: 14 }}>
+        <h2 style={{ margin: 0 }}>Agreement</h2>
+        <StatusChip status={st.status} />
+      </div>
       <dl className="kv">
         <dt>Contract</dt>
         <dd>
-          <a href={`${EXPLORER}/address/${cfg.address}`} target="_blank" rel="noreferrer">
+          <a href={`${EXPLORER}/address/${cfg.address}`} target="_blank" rel="noreferrer" className="mono">
             {shortAddr(cfg.address ?? undefined)}
           </a>
         </dd>

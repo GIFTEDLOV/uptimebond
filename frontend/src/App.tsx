@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  connectWallet, currentChainId, fmtGen, getInjected, pollTx, readAgreement,
+  connectWallet, currentChainId, getInjected, pollTx, readAgreement,
   readDeadlock, readSettlement, sendTx, shortAddr, switchToBradbury,
   type AgreementState, type DeadlockStatus, type SettlementStatus, type TxTracker,
 } from './chain';
 import { AGREEMENTS, CHAIN_ID, CHAIN_NAME, EXPLORER, REPO, SOURCE_COMMIT } from './config';
-import { Deadlock, Evidence, LifecycleBar, Overview, Ruling, TxProgress, type Role } from './components/Panels';
+import {
+  Deadlock, Evidence, LifecycleBar, Overview, Ruling, Settlement, TxProgress, type Role,
+} from './components/Panels';
+
+const LIVE = AGREEMENTS.filter((a) => !a.deprecated);
+const ARCHIVED = AGREEMENTS.filter((a) => a.deprecated);
 
 export default function App() {
-  const [cfgId, setCfgId] = useState(AGREEMENTS[0].id);
+  const [cfgId, setCfgId] = useState(LIVE[0].id);
+  const [showArchived, setShowArchived] = useState(false);
   const cfg = useMemo(() => AGREEMENTS.find((a) => a.id === cfgId)!, [cfgId]);
 
   const [account, setAccount] = useState<string | null>(null);
@@ -189,12 +195,23 @@ export default function App() {
   ].filter((a) => a.show) : [];
 
   /* ------------------------------------------------------------------ UI */
+  const outcomeKey = (id: string) =>
+    (AGREEMENTS.find((a) => a.id === id)?.expected.outcome ?? '').toLowerCase();
+
   return (
     <div className="app">
-      <header>
-        <div>
-          <h1>UptimeBond</h1>
-          <p className="tagline">SLA escrow adjudicated by GenLayer validators</p>
+      <header className="masthead">
+        <div className="brand">
+          <span className="logo" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M9 16.5l4.8 4.8L23 12" stroke="#fff" strokeWidth="3.2"
+                strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <div>
+            <h1>UptimeBond</h1>
+            <p className="tagline">SLA escrow, adjudicated by GenLayer validators</p>
+          </div>
         </div>
         <div className="wallet">
           {wrongChain && (
@@ -221,20 +238,58 @@ export default function App() {
         </div>
       )}
 
-      <nav className="cases">
-        {AGREEMENTS.map((a) => (
-          <button
-            key={a.id}
-            className={a.id === cfgId ? 'case active' : 'case'}
-            onClick={() => setCfgId(a.id)}
-            disabled={!a.address}
-            title={a.address ?? 'not yet deployed'}
-          >
-            {a.label}
-            {!a.address && <span className="tag">pending</span>}
-          </button>
-        ))}
-      </nav>
+      <div className="case-switch">
+        <p className="switch-label">Live verified agreements · Bradbury testnet</p>
+        <nav className="cases">
+          {LIVE.map((a) => (
+            <button
+              key={a.id}
+              className={a.id === cfgId ? 'case active' : 'case'}
+              onClick={() => setCfgId(a.id)}
+              disabled={!a.address}
+              title={a.address ?? 'not yet deployed'}
+            >
+              <span className="case-name">{a.label}</span>
+              <span className="case-tag">
+                <span className={`oc-dot oc-${outcomeKey(a.id)}`} aria-hidden="true" />
+                {a.expected.outcome.replaceAll('_', ' ').toLowerCase()}
+                {!a.address && <span className="tag">pending</span>}
+              </span>
+            </button>
+          ))}
+        </nav>
+
+        {ARCHIVED.length > 0 && (
+          <>
+            <button
+              className="deprecated-toggle"
+              onClick={() => setShowArchived((v) => !v)}
+              aria-expanded={showArchived}
+            >
+              {showArchived ? '▾' : '▸'} {ARCHIVED.length} archived deployment
+              {ARCHIVED.length > 1 ? 's' : ''} (broken payout — not usable)
+            </button>
+            {showArchived && (
+              <nav className="cases archived">
+                {ARCHIVED.map((a) => (
+                  <button
+                    key={a.id}
+                    className={a.id === cfgId ? 'case active' : 'case'}
+                    onClick={() => setCfgId(a.id)}
+                    disabled={!a.address}
+                    title={a.address ?? 'not yet deployed'}
+                  >
+                    <span className="case-name">{a.label}</span>
+                    <span className="case-tag">
+                      <span className="arch-flag">⚠ escrow stranded</span>
+                    </span>
+                  </button>
+                ))}
+              </nav>
+            )}
+          </>
+        )}
+      </div>
 
       <p className="blurb">{cfg.blurb}</p>
 
@@ -267,6 +322,8 @@ export default function App() {
 
       {st && (
         <>
+          <Settlement st={st} settlement={settlement} />
+
           <div className="grid">
             <Overview cfg={cfg} st={st} role={role} account={account ?? undefined} />
             <LifecycleBar status={st.status} />
@@ -307,41 +364,16 @@ export default function App() {
                 transaction appeal to re-adjudicate the <code>rule</code> transaction.
               </p>
               <p>
-                Every settlement uses <code>on=&quot;finalized&quot;</code> transfers, so funds never
+                Every payout is an EVM external message that executes at finalization by
+                protocol behavior (there is no <code>on</code> parameter), so funds never
                 move before the accepted decision is final. A ruling that is accepted but
                 not yet finalized can still be overturned.
               </p>
-              {/* Payout completion is reported ONLY from the contract's
-                  measured native balance. `status === 'RESOLVED'` means the
-                  transfers are queued; they execute at finalization, tens of
-                  minutes later. Claiming payment from the status plus
-                  arithmetic — as this panel used to — states as fact something
-                  that has not happened yet, and stayed wrong indefinitely when
-                  the payout path was broken. */}
               {st.status === 'RESOLVED' && (
-                settlement?.payout_complete ? (
-                  <div className="notice ok">
-                    Settled via <strong>{st.resolution_mode.replaceAll('_', ' ').toLowerCase()}</strong>.
-                    Payout confirmed on-chain: the contract balance is zero.
-                    Customer received {fmtGen(settlement.expected_customer_atto)} GEN;
-                    provider received {fmtGen(settlement.expected_provider_atto)} GEN,
-                    before gas.
-                  </div>
-                ) : (
-                  <div className="notice warn">
-                    Ruled and settled via{' '}
-                    <strong>{st.resolution_mode.replaceAll('_', ' ').toLowerCase()}</strong>,
-                    and the payout is <strong>queued, not yet paid</strong>.
-                    Settlement transfers execute when the release transaction
-                    finalizes. The contract still holds{' '}
-                    {settlement ? fmtGen(settlement.contract_balance_atto) : '—'} GEN.
-                    {settlement && BigInt(settlement.contract_balance_atto) > 0n && (
-                      <> Due: {fmtGen(settlement.expected_customer_atto)} GEN to the
-                      customer, {fmtGen(settlement.expected_provider_atto)} GEN to the
-                      provider.</>
-                    )}
-                  </div>
-                )
+                <p className="muted small">
+                  Settled via <strong>{st.resolution_mode.replaceAll('_', ' ').toLowerCase()}</strong>.
+                  The settlement breakdown and live payout state are shown above.
+                </p>
               )}
             </div>
           </div>
