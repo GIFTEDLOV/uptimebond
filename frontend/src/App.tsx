@@ -8,6 +8,7 @@ import { Agreements } from './pages/Agreements';
 import { AgreementPage } from './pages/AgreementPage';
 import { Invite } from './pages/Invite';
 import { Demo } from './pages/Demo';
+import { Diagnostics } from './pages/Diagnostics';
 import { Help, Privacy, Terms, NotFound } from './pages/Content';
 
 /** Scrolls to top on route change and routes the app. */
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/help" element={<Help />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="/index.html" element={<Navigate to="/" replace />} />
               <Route path="*" element={<NotFound />} />
             </Route>

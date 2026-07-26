@@ -91,7 +91,8 @@ export function Layout() {
           <a href={EXPLORER} target="_blank" rel="noopener noreferrer">Explorer</a>{' · '}
           <Link to="/help">How it works</Link>{' · '}
           <Link to="/privacy">Privacy</Link>{' · '}
-          <Link to="/terms">Terms</Link>
+          <Link to="/terms">Terms</Link>{' · '}
+          <Link to="/diagnostics">Diagnostics</Link>
         </span>
         <span className="muted small">
           {CHAIN_NAME} · testnet only · <a href={PROD_ORIGIN}>{PROD_ORIGIN.replace('https://', '')}</a>
