@@ -200,7 +200,7 @@ export function LifecycleBar({ status }: { status: string }) {
 
 export function Overview({
   cfg, st, role, account,
-}: { cfg: AgreementConfig; st: AgreementState; role: Role; account?: string }) {
+}: { cfg: { address: string | null }; st: AgreementState; role: Role; account?: string }) {
   return (
     <div className="card">
       <div className="settle-head" style={{ marginBottom: 14 }}>
@@ -261,6 +261,39 @@ export function Evidence({ cfg }: { cfg: AgreementConfig }) {
           <li key={e.key}>
             <a href={e.url} target="_blank" rel="noreferrer">{e.key}</a>
             <span className="tag">{e.role}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Evidence sources read live from the contract (get_evidence_sources).
+ *  Works for any agreement, not just the bundled demo cases. */
+const SOURCE_META: Record<string, { label: string; role: string }> = {
+  sla_terms_url: { label: 'SLA terms', role: 'Authoritative clauses' },
+  independent_monitor_url: { label: 'Independent monitor', role: 'Primary evidence' },
+  provider_status_url: { label: 'Provider status', role: 'Corroborating' },
+  maintenance_announcements_url: { label: 'Maintenance feed', role: 'Corroborating' },
+};
+
+export function EvidenceSources({ sources }: { sources: Record<string, string> }) {
+  const rows = Object.entries(sources).filter(([, url]) => !!url);
+  return (
+    <div className="card">
+      <h2>Evidence sources</h2>
+      <p className="muted">
+        Fixed at construction and never editable. UptimeBond does not monitor the service — the
+        independent monitor produces the operational evidence, and every validator re-fetches these
+        sources independently during adjudication to re-derive the ruling.
+      </p>
+      <ul className="evidence">
+        {rows.map(([key, url]) => (
+          <li key={key}>
+            <a href={url} target="_blank" rel="noopener noreferrer nofollow">
+              {SOURCE_META[key]?.label ?? key}
+            </a>
+            <span className="tag">{SOURCE_META[key]?.role ?? 'source'}</span>
           </li>
         ))}
       </ul>

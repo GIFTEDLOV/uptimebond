@@ -10,6 +10,37 @@ export const EXPLORER_API = `${EXPLORER}/api/v1`;
 export const SOURCE_COMMIT = 'ad0018207edfba936b4074d3f1ccb5a2df58ac3b';
 export const REPO = 'https://github.com/GIFTEDLOV/uptimebond';
 
+/** Canonical production origin. Used for invitation links and OG metadata. */
+export const PROD_ORIGIN = 'https://uptimebond.vercel.app';
+
+/** Contract source commit the deployable frontend asset is pinned to (the fixed
+ *  payout path). Distinct from SOURCE_COMMIT, which pins the evidence fixtures. */
+export const CONTRACT_COMMIT = '6e29b67';
+
+/** Contract bounds, mirrored from contracts/uptime_bond.py. Validated in-UI so a
+ *  deployment can never be attempted with values the constructor would reject. */
+export const BPS_DENOM = 10000;
+export const DEADLOCK_MIN_SECONDS = 3600;      // 1 hour
+export const DEADLOCK_MAX_SECONDS = 2_592_000; // 30 days
+
+export interface ServiceCategory { id: string; label: string; hint: string; }
+export const SERVICE_CATEGORIES: ServiceCategory[] = [
+  { id: 'web-api', label: 'Website or API', hint: 'A public HTTP endpoint or REST/GraphQL API.' },
+  { id: 'saas', label: 'SaaS platform', hint: 'A hosted software product with a login or dashboard.' },
+  { id: 'hosting', label: 'Hosting or cloud service', hint: 'Compute, storage, or managed infrastructure.' },
+  { id: 'rpc', label: 'Blockchain RPC or indexer', hint: 'A node RPC endpoint or chain-data indexer.' },
+  { id: 'ai', label: 'AI service', hint: 'An inference, embedding, or model-serving endpoint.' },
+  { id: 'custom', label: 'Custom', hint: 'Anything else with a measurable uptime commitment.' },
+];
+
+/** The locked outcome schedule the contract maps each ruling label to. */
+export const OUTCOME_SCHEDULE = [
+  { outcome: 'NO_BREACH', bps: 0, customer: '0%', provider: '100%', note: 'Provider keeps the full escrow.' },
+  { outcome: 'PARTIAL_REFUND', bps: 2500, customer: '25%', provider: '75%', note: 'Split refund for a moderate breach.' },
+  { outcome: 'FULL_REFUND', bps: 10000, customer: '100%', provider: '0%', note: 'Full refund for a severe breach.' },
+  { outcome: 'INSUFFICIENT_EVIDENCE', bps: 0, customer: '—', provider: '—', note: 'No automatic settlement; escrow stays custodied.' },
+] as const;
+
 /**
  * Bradbury serializes transactions per contract and each step waits on the
  * previous one's finality, so a single action can take ~30 minutes to settle.

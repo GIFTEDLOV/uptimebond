@@ -208,6 +208,95 @@ export async function sendTx(o: SendOpts): Promise<string> {
   })) as unknown as string;
 }
 
+// -------------------------------------------------------------------- deploy
+export interface DeployArgs {
+  provider: string;
+  sla_terms_url: string;
+  independent_monitor_url: string;
+  provider_status_url: string;
+  maintenance_announcements_url: string;
+  deadlock_refund_bps: number;
+  dispute_deadlock_seconds: number;
+  insufficient_evidence_deadlock_seconds: number;
+}
+
+/** Deploys UptimeBond from the connected customer wallet.
+ *
+ * Returns only the transaction hash. Deployment is NOT complete until the
+ * transaction finalizes; the contract address is then recovered from the
+ * receipt via `recoverDeployedAddress`. The caller must persist the hash before
+ * anything else so an interrupted deploy can be resumed rather than repeated. */
+export async function deployContract(
+  account: string, provider: unknown, code: string, args: DeployArgs,
+): Promise<string> {
+  const c = walletClient(account, provider);
+  return (await c.deployContract({
+    code,
+    // Constructor is positional; order mirrors contracts/uptime_bond.py.
+    args: [
+      args.provider,
+      args.sla_terms_url,
+      args.independent_monitor_url,
+      args.provider_status_url,
+      args.maintenance_announcements_url,
+      args.deadlock_refund_bps,
+      args.dispute_deadlock_seconds,
+      args.insufficient_evidence_deadlock_seconds,
+    ] as never[],
+  })) as unknown as string;
+}
+
+/** Recover a deployed contract address from its finalized deploy transaction.
+ *  The explorer index carries the address once the tx is committed. Returns null
+ *  while still pending so the caller keeps waiting rather than redeploying. */
+export async function recoverDeployedAddress(hash: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${EXPLORER_API}/transactions/${hash}`);
+    if (!r.ok) return null;
+    const d = (await r.json()) as { deployed_contract_address?: string; to_address?: string; status?: string };
+    return d.deployed_contract_address ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ------------------------------------------------------------------- balances
+export async function getBalance(address: string): Promise<bigint> {
+  const c = readClient();
+  return await c.getBalance({ address: address as `0x${string}` });
+}
+
+// ------------------------------------------------ contract-type validation
+/** Confirm an address is actually an UptimeBond contract before importing it,
+ *  by probing the view surface. A non-UptimeBond contract throws or returns a
+ *  shape without the expected keys. */
+export async function isUptimeBondContract(address: string): Promise<boolean> {
+  try {
+    const s = await readAgreement(address);
+    return typeof s?.status === 'string'
+      && typeof s?.customer === 'string'
+      && typeof s?.provider === 'string'
+      && 'escrow_atto' in s && 'resolution_mode' in s;
+  } catch {
+    return false;
+  }
+}
+
+/** Deadlock config as pinned at construction (immutable). */
+export async function readDeadlockConfig(address: string) {
+  const c = readClient();
+  return (await c.readContract({
+    address: address as `0x${string}`,
+    functionName: 'get_deadlock_config',
+    args: [],
+    jsonSafeReturn: true,
+  })) as unknown as {
+    deadlock_refund_bps: number;
+    dispute_deadlock_seconds: number;
+    insufficient_evidence_deadlock_seconds: number;
+  };
+}
+
 // -------------------------------------------------------------------- wallet
 export interface Eip1193 {
   request: (a: { method: string; params?: unknown[] }) => Promise<unknown>;
