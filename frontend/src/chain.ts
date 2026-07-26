@@ -10,7 +10,7 @@
  */
 
 import { createClient, chains } from 'genlayer-js';
-import { CHAIN_ID, EXPLORER_API } from './config';
+import { CHAIN_ID } from './config';
 
 export type TxPhase =
   | 'idle'
@@ -142,48 +142,51 @@ export async function readEvidenceSources(address: string) {
 const PENDING = new Set(['pending', 'proposing', 'committing', 'revealing', 'activated', 'queued']);
 const BAD = new Set(['canceled', 'undetermined', 'validators_timeout', 'leader_timeout']);
 
-interface ExplorerTx {
-  status?: string;
-  execution_result?: string;
-  leader?: string;
-  validators?: string[];
+interface RpcTx {
+  statusName?: string;
+  status?: string | number;
+  txExecutionResultName?: string;
+  txDataDecoded?: { contractAddress?: string };
 }
 
 /**
- * Poll the explorer index rather than the JSON-RPC receipt endpoint: under
- * load the RPC intermittently returns HTML or "Internal error", which would
- * otherwise surface to the user as a spurious failure.
+ * Poll transaction status through the JSON-RPC via genlayer-js.
+ *
+ * The explorer index is NOT used from the browser: its API sends no
+ * `Access-Control-Allow-Origin` header, so a browser fetch is CORS-blocked. The
+ * RPC is CORS-open and returns the same consensus status and execution result.
+ * Two rules still hold: a hash is not success, and consensus-accepted +
+ * execution error is a failure.
  */
 export async function pollTx(hash: string): Promise<TxTracker> {
-  let detail: ExplorerTx | null = null;
+  let tx: RpcTx | null = null;
   try {
-    const r = await fetch(`${EXPLORER_API}/transactions/${hash}`);
-    if (r.ok) detail = (await r.json()) as ExplorerTx;
+    tx = (await readClient().getTransaction({ hash: hash as never })) as unknown as RpcTx;
   } catch {
-    return { phase: 'unknown', hash, error: 'Could not reach the explorer to check status.' };
+    // Not indexed yet, or a transient RPC hiccup — keep waiting, don't error.
+    return { phase: 'submitted', hash };
   }
-  if (!detail) return { phase: 'submitted', hash };
+  if (!tx) return { phase: 'submitted', hash };
 
-  const status = (detail.status ?? '').toLowerCase();
-  const exec = detail.execution_result ?? undefined;
+  const status = String(tx.statusName ?? tx.status ?? '').toUpperCase();
+  const exec = tx.txExecutionResultName ?? undefined;
 
-  if (BAD.has(status)) {
+  if (BAD.has(status.toLowerCase())) {
     return { phase: 'failed', hash, consensusStatus: status, executionResult: exec,
-      error: `Consensus did not accept this transaction (${status}).` };
+      error: `Consensus did not accept this transaction (${status.toLowerCase()}).` };
   }
   if (exec && exec.includes('ERROR')) {
-    // Consensus may say accepted; execution still failed. Not a success.
     return { phase: 'execution-error', hash, consensusStatus: status, executionResult: exec,
       error: 'Consensus accepted the transaction but contract execution failed.' };
   }
-  if (status === 'finalized') {
+  if (status === 'FINALIZED') {
     return { phase: 'finalized', hash, consensusStatus: status, executionResult: exec, succeeded: true };
   }
-  if (status === 'accepted') {
+  if (status === 'ACCEPTED') {
     return { phase: 'consensus-accepted', hash, consensusStatus: status, executionResult: exec,
       succeeded: Boolean(exec && !exec.includes('ERROR')) };
   }
-  if (PENDING.has(status)) return { phase: 'pending-consensus', hash, consensusStatus: status };
+  if (PENDING.has(status.toLowerCase())) return { phase: 'pending-consensus', hash, consensusStatus: status };
   return { phase: 'submitted', hash, consensusStatus: status };
 }
 
@@ -246,15 +249,17 @@ export async function deployContract(
   })) as unknown as string;
 }
 
-/** Recover a deployed contract address from its finalized deploy transaction.
- *  The explorer index carries the address once the tx is committed. Returns null
- *  while still pending so the caller keeps waiting rather than redeploying. */
+/** Recover a deployed contract address from its deploy transaction, via the RPC
+ *  (CORS-open). The decoded deploy data carries the address once committed.
+ *  Returns null while still pending so the caller keeps waiting, never redeploys. */
 export async function recoverDeployedAddress(hash: string): Promise<string | null> {
   try {
-    const r = await fetch(`${EXPLORER_API}/transactions/${hash}`);
-    if (!r.ok) return null;
-    const d = (await r.json()) as { deployed_contract_address?: string; to_address?: string; status?: string };
-    return d.deployed_contract_address ?? null;
+    const tx = (await readClient().getTransaction({ hash: hash as never })) as unknown as {
+      txDataDecoded?: { contractAddress?: string };
+      data?: { contract_address?: string };
+      recipient?: string;
+    };
+    return tx?.txDataDecoded?.contractAddress ?? tx?.data?.contract_address ?? null;
   } catch {
     return null;
   }

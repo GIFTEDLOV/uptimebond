@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CHAIN_ID, CHAIN_NAME, EXPLORER_API, RPC_URL } from '../config';
+import { CHAIN_ID, CHAIN_NAME, RPC_URL } from '../config';
 import { BUILD_VERSION, recentErrors, clearErrors, type ClientError } from '../lib/health';
 import { useWallet } from '../state/wallet';
 
@@ -10,15 +10,14 @@ type Ping = 'checking' | 'ok' | 'down';
  *  Nothing here is transmitted anywhere. */
 export function Diagnostics() {
   const wallet = useWallet();
-  const [explorer, setExplorer] = useState<Ping>('checking');
   const [rpc, setRpc] = useState<Ping>('checking');
   const [errors, setErrors] = useState<ClientError[]>(recentErrors());
 
   useEffect(() => { document.title = 'Diagnostics — UptimeBond'; }, []);
 
+  // Only the RPC is pinged from the browser — it is CORS-open. The explorer API
+  // sends no CORS header, so it is reached only server-side (validators), never here.
   useEffect(() => {
-    fetch(`${EXPLORER_API}/transactions/0x${'0'.repeat(64)}`)
-      .then((r) => setExplorer(r.status < 500 ? 'ok' : 'down')).catch(() => setExplorer('down'));
     fetch(RPC_URL, { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }) })
       .then((r) => setRpc(r.ok ? 'ok' : 'down')).catch(() => setRpc('down'));
@@ -41,7 +40,6 @@ export function Diagnostics() {
             <dt>Network</dt><dd>{CHAIN_NAME} <span className="mono">(chain {CHAIN_ID})</span></dd>
             <dt>Wallet</dt><dd>{wallet.hasWallet ? (wallet.account ? 'connected' : 'available') : 'none detected'}</dd>
             <dt>Wallet chain</dt><dd>{wallet.chainId ?? '—'}{wallet.wrongChain ? ' (wrong network)' : ''}</dd>
-            <dt>Explorer API</dt><dd role="status">{dot(explorer)} {explorer}</dd>
             <dt>JSON-RPC</dt><dd role="status">{dot(rpc)} {rpc}</dd>
           </dl>
         </div>
