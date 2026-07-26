@@ -1,0 +1,13 @@
+{
+  "service": "Example API",
+  "windows": [
+    {
+      "start": "2026-05-12T02:00:00Z",
+      "end": "2026-05-12T07:00:00Z",
+      "announced_at": "2026-05-12T00:00:00Z",
+      "reason": "database migration",
+      "notice_hours": 2,
+      "note": "Announced only 2 hours ahead — fails the 24-hour notice in SLA-2, so this downtime is NOT excluded."
+    }
+  ]
+}

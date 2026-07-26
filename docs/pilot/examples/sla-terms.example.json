@@ -1,0 +1,15 @@
+{
+  "service": "Example API",
+  "period": "monthly",
+  "commitment_uptime_pct": 99.5,
+  "measurement": "1-minute checks from an independent monitor over the agreement period",
+  "clauses": {
+    "SLA-1": "Uptime commitment — at least 99.50% of the service period.",
+    "SLA-2": "Maintenance exclusion — downtime during a maintenance window is excluded only if announced at least 24 hours in advance.",
+    "SLA-3": "Partial credit — 98.00%–99.49% uptime yields a 25% refund.",
+    "SLA-4": "Full credit — below 98.00% uptime yields a 100% refund.",
+    "SLA-5": "No credit at or above the 99.50% commitment.",
+    "SLA-6": "Evidence hierarchy — the independent monitor is primary; the provider status page and maintenance feed are corroborating. If the monitor's coverage of the period is insufficient to determine uptime, the outcome is INSUFFICIENT_EVIDENCE."
+  },
+  "notes": "Authoritative terms. Validators read this document to interpret the monitor evidence. Keep it public and commit-pinned."
+}

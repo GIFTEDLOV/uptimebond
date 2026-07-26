@@ -1,0 +1,16 @@
+{
+  "service": "Example API",
+  "monitor": "acme-uptime",
+  "period_start": "2026-05-01T00:00:00Z",
+  "period_end": "2026-05-31T23:59:59Z",
+  "check_interval_seconds": 60,
+  "total_checks": 44640,
+  "successful_checks": 44238,
+  "failed_checks": 402,
+  "downtime_minutes": 402,
+  "uptime_pct": 99.1,
+  "coverage_pct": 100,
+  "incidents": [
+    { "start": "2026-05-12T02:00:00Z", "end": "2026-05-12T08:42:00Z", "cause": "unannounced degradation" }
+  ]
+}

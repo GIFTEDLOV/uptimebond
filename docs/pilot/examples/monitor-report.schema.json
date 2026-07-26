@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UptimeBond independent monitor report",
+  "description": "Primary operational evidence. Publish your uptime checker's summary in this shape at a public, commit-pinned HTTPS URL. UptimeBond does not produce this — you (or a third-party monitor) do.",
+  "type": "object",
+  "required": ["period_start", "period_end", "total_checks", "successful_checks", "failed_checks", "uptime_pct"],
+  "properties": {
+    "service": { "type": "string" },
+    "monitor": { "type": "string", "description": "Name of the monitoring system that produced this report." },
+    "period_start": { "type": "string", "format": "date-time" },
+    "period_end": { "type": "string", "format": "date-time" },
+    "check_interval_seconds": { "type": "integer", "minimum": 1 },
+    "total_checks": { "type": "integer", "minimum": 0 },
+    "successful_checks": { "type": "integer", "minimum": 0 },
+    "failed_checks": { "type": "integer", "minimum": 0 },
+    "downtime_minutes": { "type": "number", "minimum": 0 },
+    "uptime_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+    "coverage_pct": { "type": "number", "minimum": 0, "maximum": 100, "description": "Share of the period actually covered by checks. Low coverage should map to INSUFFICIENT_EVIDENCE." },
+    "incidents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["start", "end"],
+        "properties": {
+          "start": { "type": "string", "format": "date-time" },
+          "end": { "type": "string", "format": "date-time" },
+          "cause": { "type": "string" }
+        }
+      }
+    }
+  }
+}
