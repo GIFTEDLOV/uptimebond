@@ -31,11 +31,13 @@ jobs:
       - name: Build reproducibility (pinned SDK, one install, shared classes, source parity)
         run: npm run repro
 
-      - name: Dependency tree — single genlayer-js, no drift
-        run: |
-          set -e
-          npm ls genlayer-js
-          test "$(npm ls genlayer-js --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s);const seen=new Set();(function w(n){if(!n)return;for(const [k,v] of Object.entries(n.dependencies||{})){if(k==="genlayer-js")seen.add(v.version);w(v);}})(t);console.log(seen.size);})" )" = "1"
+      # `npm ls` exits non-zero on an unmet, invalid, or extraneous dependency,
+      # and prints the resolved tree for the log. The stronger assertions —
+      # exactly one lockfile entry, no nested duplicate install, and the
+      # installed version matching the pin — are made by `npm run repro` above,
+      # which can express them without fighting shell quoting.
+      - name: Dependency tree — resolved genlayer-js
+        run: npm ls genlayer-js
 
       - name: Lint
         run: npm run lint
