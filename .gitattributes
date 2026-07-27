@@ -1,0 +1,20 @@
+# The contract source is deployed byte-for-byte: the frontend embeds it with
+# Vite's `?raw` import and submits exactly those bytes as the deploy payload.
+# Its hash therefore decides the deployed code, and GenLayer derives the
+# contract address from the transaction that carries it.
+#
+# Without this, the bytes depended on the checkout platform. Git stores the file
+# with LF (33,517 bytes, sha256 04fe3a7b…), but a Windows checkout with
+# core.autocrlf=true materialises CRLF (34,266 bytes, sha256 93e1ddb9…) — so a
+# bundle built on Windows and one built on Linux CI deployed *different
+# contracts* from the same commit. CI caught this when the reproducibility
+# check hashed a different file than the developer machine did.
+#
+# Pinning to LF makes the deployed bytes a property of the commit, not of who
+# built it.
+contracts/uptime_bond.py         text eol=lf
+frontend/src/contract/uptime_bond.py text eol=lf
+
+# Evidence fixtures are fetched by validators over HTTPS and hashed nowhere,
+# but keeping them stable avoids noisy diffs across platforms.
+evidence/**/*.json text eol=lf

@@ -14,10 +14,21 @@ export const SOURCE_COMMIT = 'ad0018207edfba936b4074d3f1ccb5a2df58ac3b';
  *  SDK that produced it instead of leaving it to archaeology. */
 export const SDK_VERSION = '1.1.8';
 
-/** SHA-256 of contracts/uptime_bond.py as embedded in this bundle. Asserted
- *  against the file itself in CI; recorded with every deployment. */
+/**
+ * SHA-256 of contracts/uptime_bond.py as embedded in this bundle, over its
+ * canonical LF bytes. Asserted against the file itself in CI and recorded with
+ * every deployment.
+ *
+ * The four verified v2 contracts and the two July 2026 browser deployments
+ * carry a *different* hash — `93e1ddb9…`, 34,266 bytes — because they were
+ * deployed from a Windows checkout that materialised CRLF line endings. That is
+ * historical fact, not a mismatch to repair: those contracts are immutable and
+ * their source is whatever was submitted. `.gitattributes` now pins the file to
+ * LF so the bytes are a property of the commit rather than of the machine that
+ * built the bundle.
+ */
 export const CONTRACT_SOURCE_SHA256 =
-  '93e1ddb9d29c33fba65ac1ba9402d2a11454755faaf373b06e76a8fb906721a3';
+  '04fe3a7b0b47cab5bb997bce645228e7eea10a0564ac55971753beae40c4c49f';
 export const REPO = 'https://github.com/GIFTEDLOV/uptimebond';
 
 /** Canonical production origin. Used for invitation links and OG metadata. */

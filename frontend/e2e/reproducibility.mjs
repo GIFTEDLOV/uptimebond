@@ -87,15 +87,31 @@ const bytes = new Uint8Array(20).fill(0xab);
 check('cross-side instanceof holds',
   new scriptClass(bytes) instanceof browserClass && new browserClass(bytes) instanceof scriptClass);
 
-// --- 4. The frontend's embedded contract source is byte-identical ---------
+// --- 4. The contract source deploys the same bytes on every machine -------
+// The frontend embeds this file with Vite's `?raw` import and submits exactly
+// those bytes. A CRLF checkout on Windows produced 34,266 bytes where Linux CI
+// produced 33,517 — the same commit deploying two different contracts,
+// depending only on who built it. .gitattributes pins it to LF; these checks
+// make a regression impossible to miss.
 const canonical = readFileSync(join(REPO, 'contracts', 'uptime_bond.py'));
 const embedded = readFileSync(join(FRONTEND, 'src', 'contract', 'uptime_bond.py'));
+
 check('embedded contract source is byte-identical to contracts/uptime_bond.py',
   Buffer.compare(canonical, embedded) === 0,
   `${sha(canonical).slice(0, 16)}… vs ${sha(embedded).slice(0, 16)}…`);
-check('embedded contract source matches the deployed v2 hash',
-  sha(embedded) === '93e1ddb9d29c33fba65ac1ba9402d2a11454755faaf373b06e76a8fb906721a3',
-  sha(embedded));
+
+const crlf = (b) => (b.toString('utf8').match(/\r\n/g) ?? []).length;
+check('contract source has no CRLF line endings',
+  crlf(canonical) === 0 && crlf(embedded) === 0,
+  `contracts=${crlf(canonical)} embedded=${crlf(embedded)} — CRLF makes the deployed bytes platform-dependent`);
+
+// The constant the app records with every deployment must be the hash of the
+// file the app actually ships, not a value that drifted from it.
+const configSrc = readFileSync(join(FRONTEND, 'src', 'config.ts'), 'utf8');
+const declaredHash = configSrc.match(/CONTRACT_SOURCE_SHA256\s*=\s*\n?\s*'([0-9a-f]{64})'/)?.[1];
+check('config.ts CONTRACT_SOURCE_SHA256 matches the embedded source',
+  declaredHash === sha(embedded),
+  `config ${String(declaredHash).slice(0, 16)}… vs file ${sha(embedded).slice(0, 16)}…`);
 
 // --- 5. No script reaches outside the repository for the SDK -------------
 const scriptsDir = join(REPO, 'deploy', 'scripts');
