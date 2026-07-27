@@ -26,6 +26,10 @@ export function AgreementView({
   const [sources, setSources] = useState<Record<string, string> | null>(null);
   const [pending, setPending] = useState<ActionDef | null>(null);
   const [bps, setBps] = useState(5000);
+  // open_dispute(incident_window) requires a non-empty string; the contract
+  // rejects a blank one. Collected in the confirmation dialog, seeded from the
+  // caller's suggestion when there is one.
+  const [incident, setIncident] = useState(incidentWindow ?? '');
 
   const role = roleFor(wallet.account, st);
 
@@ -48,8 +52,8 @@ export function AgreementView({
   const actions = useMemo(() => {
     if (!st) return [];
     const escrow = st.status === 'AWAITING_FUNDING' ? fundAtto : BigInt(st.escrow_atto || '0');
-    return availableActions({ st, deadlock, role, fundAtto: escrow, incidentWindow });
-  }, [st, deadlock, role, fundAtto, incidentWindow]);
+    return availableActions({ st, deadlock, role, fundAtto: escrow, incidentWindow: incident });
+  }, [st, deadlock, role, fundAtto, incident]);
 
   const canAct = Boolean(wallet.account) && !wallet.wrongChain && !write.busy;
 
@@ -57,6 +61,11 @@ export function AgreementView({
     if (!wallet.account || !wallet.provider) return;
     let args = a.args;
     if (a.method === 'propose_mutual_settlement') args = [bps];
+    if (a.method === 'open_dispute') {
+      const w = incident.trim();
+      if (!w) return; // The contract rejects an empty window; never submit one.
+      args = [w];
+    }
     void write.run({
       method: a.method, args, valueWei: a.valueWei,
       account: wallet.account, provider: wallet.provider, address,
@@ -178,8 +187,25 @@ export function AgreementView({
         confirmLabel={pending?.label}
         onCancel={() => setPending(null)}
         onConfirm={() => pending && runAction(pending)}
+        confirmDisabled={pending?.method === 'open_dispute' && !incident.trim()}
       >
         <p>{pending?.consequence}</p>
+        {pending?.method === 'open_dispute' && (
+          <label className="field" style={{ marginTop: 14, marginBottom: 4 }}>
+            <span>Incident window</span>
+            <input
+              type="text"
+              value={incident}
+              onChange={(e) => setIncident(e.target.value)}
+              placeholder="e.g. NimbusAPI May 2026 uptime dispute"
+              aria-label="Incident window being disputed"
+            />
+            <em className="muted small">
+              The period the validators will rule on. Recorded on-chain with the dispute
+              and shown to both parties. Required.
+            </em>
+          </label>
+        )}
         {pending?.method === 'propose_mutual_settlement' && (
           <label className="field" style={{ marginTop: 10 }}>
             <span>Customer refund: <strong>{(bps / 100).toFixed(0)}%</strong></span>

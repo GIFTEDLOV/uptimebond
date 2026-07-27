@@ -35,6 +35,20 @@ describe('action availability', () => {
     expect(methods(st, 'customer')).toEqual(['approve_service', 'open_dispute']);
     expect(methods(st, 'provider')).toEqual(['open_dispute']);
   });
+  it('open_dispute carries the incident window the contract requires', () => {
+    // contracts/uptime_bond.py: open_dispute(incident_window: str) reverts on an
+    // empty window, so the caller must always supply one. Submitting the action
+    // without it is a guaranteed revert ~30 minutes later.
+    const st = state({ status: 'ACTIVE' });
+    const withWindow = availableActions({
+      st, role: 'customer', deadlock: null, incidentWindow: 'May 2026 uptime dispute',
+    }).find((a) => a.method === 'open_dispute');
+    expect(withWindow?.args).toEqual(['May 2026 uptime dispute']);
+
+    const without = availableActions({ st, role: 'customer', deadlock: null })
+      .find((a) => a.method === 'open_dispute');
+    expect(without?.args).toBeUndefined();
+  });
   it('DISPUTED: parties can rule; observer cannot', () => {
     const st = state({ status: 'DISPUTED' });
     expect(methods(st, 'customer')).toEqual(['rule']);

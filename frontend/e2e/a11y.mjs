@@ -41,7 +41,6 @@ for (const vp of VIEWPORTS) {
 
     await page.evaluate(AXE_SOURCE);
     const res = await page.evaluate(async () => {
-      // eslint-disable-next-line no-undef
       const r = await window.axe.run(document, {
         runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
       });
