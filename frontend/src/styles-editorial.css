@@ -1,0 +1,388 @@
+/* ====================================================================
+   UptimeBond — editorial sections
+   Full-bleed storytelling surfaces used by the homepage and by the
+   closing panels of the operational pages.
+   ==================================================================== */
+
+/* ------------------------------------------------------------ section */
+.ed {
+  position: relative;
+  padding: clamp(80px, 12vw, 168px) var(--gutter);
+}
+.ed-in { max-width: var(--shell); margin-inline: auto; }
+.ed-in.narrow { max-width: var(--narrow); }
+.ed-in.centered { text-align: center; }
+.ed-in.centered .lede { margin-inline: auto; }
+
+.ed-tint { background: var(--bg-2); }
+.ed-beige { background: var(--beige); }
+.ed-line { border-top: 1px solid var(--line); }
+
+.ed-dark {
+  background: var(--espresso);
+  color: var(--on-dark);
+}
+.ed-dark h2, .ed-dark h3 { color: var(--on-dark); }
+.ed-dark p { color: var(--on-dark-dim); }
+.ed-dark a { color: var(--on-dark); }
+.ed-dark .rule { background: var(--line-dark); }
+
+/* --------------------------------------------------------- typography */
+.display {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(42px, 7.4vw, 92px);
+  line-height: 1.02; letter-spacing: -.035em;
+  margin: 0 0 28px; text-wrap: balance;
+}
+.headline {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(32px, 5vw, 60px);
+  line-height: 1.06; letter-spacing: -.03em;
+  margin: 0 0 24px; text-wrap: balance;
+}
+.subhead {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(24px, 3.2vw, 34px);
+  line-height: 1.16; letter-spacing: -.024em; margin: 0 0 16px;
+}
+.lede {
+  font-size: clamp(17px, 1.5vw, 19.5px); line-height: 1.68;
+  color: var(--ink-dim); max-width: 58ch; margin: 0 0 34px;
+  text-wrap: pretty;
+}
+.ed-dark .lede { color: var(--on-dark-dim); }
+.lede.wide { max-width: 66ch; }
+
+.rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+.rule-short { width: 56px; height: 1px; background: var(--stone); border: 0; margin: 0 0 28px; }
+.centered .rule-short { margin-inline: auto; }
+
+/* --------------------------------------------------------------- hero */
+.hero {
+  padding: clamp(56px, 9vw, 116px) var(--gutter) clamp(40px, 6vw, 76px);
+  text-align: center;
+}
+.hero-copy { max-width: 940px; margin-inline: auto; }
+.hero-title {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(40px, 7.6vw, 96px);
+  line-height: 1.015; letter-spacing: -.038em;
+  margin: 0 0 30px; text-wrap: balance; color: var(--espresso);
+}
+.hero-sub {
+  font-size: clamp(16.5px, 1.5vw, 19px); line-height: 1.68; color: var(--ink-dim);
+  max-width: 60ch; margin: 0 auto 36px; text-wrap: pretty;
+}
+.hero .hero-cta { justify-content: center; margin-bottom: 22px; }
+.hero-fine { font-size: 13.5px; color: var(--muted); margin: 0; }
+
+.hero-visual {
+  margin: clamp(46px, 7vw, 88px) auto 0;
+  max-width: 1000px; width: 100%;
+}
+.hero-visual svg { width: 100%; height: auto; display: block; }
+
+/* --------------------------------------------------- framed evidence */
+.frame {
+  border: 1px solid var(--line-2); border-radius: var(--radius-lg);
+  background: var(--bone); box-shadow: var(--shadow-lg);
+  overflow: hidden; margin-inline: auto;
+}
+.frame-sm { max-width: 560px; }
+.frame-cap {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 20px; border-bottom: 1px solid var(--line);
+  background: var(--panel-2); font-size: 11.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--muted); font-weight: 600;
+}
+.frame-body { padding: 26px; }
+.frame-body svg { width: 100%; height: auto; display: block; }
+.frame-hint {
+  text-align: center; font-size: 13px; color: var(--muted);
+  margin: 26px 0 0; display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.frame-hint::after {
+  content: ""; width: 7px; height: 7px; flex: none;
+  border-right: 1.4px solid currentColor; border-bottom: 1.4px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  animation: nudge 2.4s var(--ease) infinite;
+}
+@keyframes nudge {
+  0%, 100% { transform: translateY(-3px) rotate(45deg); opacity: .55; }
+  50%      { transform: translateY(1px) rotate(45deg);  opacity: 1; }
+}
+
+/* ------------------------------------------------ zoom-into-the-frame
+   The framed composition above expands into a full-bleed adjudication
+   view as the stage scrolls. The clip window opens from a small centred
+   rectangle to the full viewport while the artwork scales up, so the two
+   sections read as one continuous move rather than two panels.        */
+.zoom-stage {
+  position: relative;
+  height: 300vh;
+  background: var(--espresso);
+}
+.zoom-sticky {
+  position: sticky; top: 0; height: 100vh; overflow: hidden;
+  display: grid; place-items: center;
+  background: var(--bg);
+}
+.zoom-canvas {
+  --z: 0;
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: var(--espresso);
+  clip-path: inset(
+    calc((50% - 168px) * (1 - var(--z)))
+    calc((50% - 280px) * (1 - var(--z)))
+    calc((50% - 168px) * (1 - var(--z)))
+    calc((50% - 280px) * (1 - var(--z)))
+    round calc(18px * (1 - var(--z)))
+  );
+  will-change: clip-path;
+}
+/* The third term keeps the artwork's height inside ~62vh (its aspect is
+   1200:660), so the settlement rail at its foot always clears the copy that
+   fades in below. The lift does the rest. */
+.zoom-art {
+  width: min(1120px, 90vw, 112vh);
+  transform: translateY(calc(-8vh * var(--z))) scale(calc(.48 + .52 * var(--z)));
+  transform-origin: center;
+  will-change: transform;
+}
+.zoom-art svg { width: 100%; height: auto; display: block; }
+
+.zoom-copy {
+  position: absolute; inset: auto 0 0 0;
+  padding: clamp(26px, 3.4vw, 44px) var(--gutter);
+  background: linear-gradient(
+    to top, var(--espresso) 0%, var(--espresso) 62%, rgba(34, 26, 19, 0) 100%);
+  opacity: calc((var(--z) - .55) * 2.6);
+  pointer-events: none;
+}
+.zoom-copy-in { max-width: var(--shell); margin-inline: auto; }
+.zoom-copy .headline { margin-bottom: 14px; color: var(--on-dark); }
+.zoom-copy .lede { margin-bottom: 0; color: var(--on-dark-dim); }
+
+.zoom-flag {
+  position: absolute; top: clamp(20px, 4vw, 44px); left: 0; right: 0;
+  text-align: center; opacity: calc(1 - var(--z) * 2.4);
+  font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zoom-stage { height: auto; }
+  .zoom-sticky { position: static; height: auto; min-height: 0; }
+  .zoom-canvas {
+    position: static; clip-path: none;
+    padding: clamp(64px, 9vw, 120px) var(--gutter) 0;
+  }
+  .zoom-art { transform: none; }
+  .zoom-copy {
+    position: static; background: none; opacity: 1;
+    padding: clamp(32px, 5vw, 56px) 0 clamp(64px, 9vw, 110px);
+  }
+  .zoom-flag { display: none; }
+  .frame-hint::after { animation: none; }
+}
+
+/* --------------------------------------------------- consensus panel */
+.consensus-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: clamp(28px, 4vw, 56px); margin-top: clamp(44px, 6vw, 76px);
+}
+.consensus-item { border-top: 1px solid var(--line-dark); padding-top: 22px; }
+.consensus-item .num {
+  font-family: var(--serif); font-size: 15px; color: var(--stone);
+  display: block; margin-bottom: 14px; font-variant-numeric: tabular-nums;
+}
+.consensus-item h3 { font-size: 22px; letter-spacing: -.022em; margin: 0 0 10px; }
+.consensus-item p { font-size: 15px; line-height: 1.65; margin: 0; }
+
+/* --------------------------------------------------------- settlement */
+.payouts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px; margin-top: clamp(40px, 5vw, 64px);
+}
+.payout-card {
+  background: var(--bone); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: clamp(24px, 3vw, 32px);
+  display: flex; flex-direction: column; gap: 14px;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+.payout-card:hover { transform: translateY(-3px); border-color: var(--stone); box-shadow: var(--shadow); }
+.payout-key {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  font-weight: 600; color: var(--muted);
+}
+.payout-key .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.payout-name {
+  font-family: var(--serif); font-size: 26px; letter-spacing: -.024em; line-height: 1.12;
+}
+.payout-split { display: flex; gap: 6px; align-items: stretch; height: 8px; border-radius: var(--pill); overflow: hidden; background: var(--taupe); }
+.payout-split .seg-customer { background: var(--bronze); }
+.payout-split .seg-provider { background: var(--olive); }
+.payout-legend {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.payout-card p { font-size: 14px; line-height: 1.6; color: var(--ink-dim); margin: 0; }
+
+/* --------------------------------------------------------- case study */
+.cases-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 22px; margin-top: clamp(40px, 5vw, 64px);
+}
+@media (min-width: 980px) {
+  /* Four cases read better as a balanced pair of rows than as three-plus-one. */
+  .cases-grid { grid-template-columns: 1fr 1fr; gap: 26px; }
+}
+.case-study {
+  background: var(--bone); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: clamp(26px, 3.2vw, 36px);
+  display: flex; flex-direction: column;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+.case-study:hover { transform: translateY(-3px); border-color: var(--stone); box-shadow: var(--shadow); }
+.case-study .cs-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.cs-index {
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+.cs-outcome {
+  font-family: var(--serif); font-size: clamp(24px, 2.6vw, 30px);
+  letter-spacing: -.024em; line-height: 1.1; margin: 0 0 12px; text-transform: lowercase;
+}
+.cs-outcome::first-letter { text-transform: uppercase; }
+.cs-blurb { font-size: 14.5px; line-height: 1.65; color: var(--ink-dim); margin: 0 0 24px; }
+.cs-figures {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
+}
+.cs-fig { background: var(--panel-2); padding: 14px 16px; }
+.cs-fig dt {
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; margin-bottom: 6px;
+  /* Reserve two lines so a wrapped label never shunts its figure out of line. */
+  min-height: 2.4em; line-height: 1.2;
+}
+.cs-fig dd {
+  margin: 0; font-family: var(--serif); font-size: 21px; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.cs-fig dd .unit { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-left: 4px; letter-spacing: .04em; }
+.cs-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.cs-foot {
+  margin-top: auto; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 13.5px;
+}
+.cs-foot .mono { color: var(--muted); font-size: 12.5px; }
+
+/* ------------------------------------------------------- how it works */
+.lifecycle-ed { display: flex; flex-direction: column; margin-top: clamp(40px, 6vw, 72px); }
+.life-step {
+  display: grid; grid-template-columns: 90px 1fr;
+  gap: clamp(20px, 4vw, 56px); align-items: start;
+  padding: clamp(30px, 4.4vw, 52px) 0; border-top: 1px solid var(--line);
+}
+.life-step:last-child { border-bottom: 1px solid var(--line); }
+.life-n {
+  font-family: var(--serif); font-size: clamp(30px, 4vw, 46px);
+  color: var(--stone); letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.life-body { max-width: 62ch; }
+.life-body h3 { font-size: clamp(24px, 3.2vw, 34px); letter-spacing: -.026em; margin: 0 0 12px; }
+.life-body p { font-size: 16px; line-height: 1.7; color: var(--ink-dim); margin: 0; }
+.life-body .life-who {
+  display: inline-block; margin-top: 14px; font-size: 11.5px;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--muted); font-weight: 600;
+}
+
+/* ------------------------------------------------------- trust panel */
+.trust-panel {
+  margin-top: clamp(44px, 6vw, 76px);
+  border: 1px solid var(--line-2); border-radius: var(--radius-lg);
+  background: var(--bone); box-shadow: var(--shadow-lg);
+  padding: clamp(30px, 5vw, 62px);
+}
+.trust-panel svg { width: 100%; height: auto; display: block; }
+
+/* ---------------------------------------------------------- final CTA */
+.final-cta { text-align: center; }
+.final-cta .display { margin-bottom: 34px; }
+.final-cta .hero-cta { justify-content: center; }
+.final-cta .lede { margin-inline: auto; margin-bottom: 40px; }
+
+/* ---------------------------------------------------------- responsive */
+@media (max-width: 720px) {
+  .zoom-stage { height: 240vh; }
+  .zoom-canvas {
+    clip-path: inset(
+      calc((50% - 130px) * (1 - var(--z)))
+      calc((50% - 44vw) * (1 - var(--z)))
+      calc((50% - 130px) * (1 - var(--z)))
+      calc((50% - 44vw) * (1 - var(--z)))
+      round calc(14px * (1 - var(--z)))
+    );
+  }
+  .zoom-art { transform: translateY(calc(-5vh * var(--z))) scale(calc(.62 + .38 * var(--z))); }
+  .life-step { grid-template-columns: 1fr; gap: 12px; }
+  .life-n { font-size: 26px; }
+  .cs-figures { grid-template-columns: 1fr; }
+}
+
+/* ====================================================================
+   Abstract product artwork
+   Thin-stroke compositions built from the same palette as the page.
+   ==================================================================== */
+.art { display: block; width: 100%; height: auto; }
+
+/* --- light ground ---------------------------------------------------- */
+.a-ln       { fill: none; stroke: var(--stone); stroke-width: 1; }
+.a-ln-soft  { fill: none; stroke: var(--line-2); stroke-width: 1; }
+.a-dash     { fill: none; stroke: var(--stone); stroke-width: 1; stroke-dasharray: 3 5; }
+.a-bone     { fill: var(--bone); stroke: var(--stone); stroke-width: 1; }
+.a-beige    { fill: var(--beige); stroke: none; }
+.a-taupe    { fill: var(--taupe); }
+.a-stone    { fill: var(--stone); }
+.a-olive    { fill: var(--olive); }
+.a-bronze   { fill: var(--bronze); }
+.a-espresso { fill: var(--espresso); }
+.a-arc-c    { fill: none; stroke: var(--bronze); stroke-width: 3; stroke-linecap: round; }
+.a-arc-p    { fill: none; stroke: var(--olive); stroke-width: 3; stroke-linecap: round; }
+.a-cap {
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  letter-spacing: .16em; fill: var(--muted);
+}
+.a-cap-ink { fill: var(--ink-dim); }
+
+/* --- dark ground ----------------------------------------------------- */
+.d-ln      { fill: none; stroke: rgba(244, 237, 225, .26); stroke-width: 1; }
+.d-ln-soft { fill: none; stroke: rgba(244, 237, 225, .13); stroke-width: 1; }
+.d-panel   { fill: #2e2419; stroke: rgba(244, 237, 225, .22); stroke-width: 1; }
+.d-fill    { fill: rgba(244, 237, 225, .17); }
+.d-fill-2  { fill: rgba(244, 237, 225, .33); }
+.d-accent  { fill: #b8925c; }
+.d-olive   { fill: #8b9a67; }
+.d-cap {
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  letter-spacing: .16em; fill: rgba(205, 192, 172, .88);
+}
+.d-ttl { font-family: var(--serif); font-size: 19px; fill: #f4ede1; }
+
+/* Progressive reveal inside the zoom scene: layers surface as the frame opens. */
+.z-mid  { opacity: calc((var(--z) - .22) * 2.6); }
+.z-late { opacity: calc((var(--z) - .52) * 3); }
+@media (prefers-reduced-motion: reduce) {
+  .z-mid, .z-late { opacity: 1; }
+}
