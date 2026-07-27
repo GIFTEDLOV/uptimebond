@@ -14,8 +14,12 @@ import type { AgreementState } from '../chain';
  */
 
 const run = vi.fn();
+const refresh = vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true }));
 const CUST = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 const PROV = '0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc';
+
+/** Flipped by tests that need the unreadable-contract branch. */
+let live: { st: AgreementState | null; error: string | null } = { st: null, error: null };
 
 const ACTIVE: AgreementState = {
   customer: CUST, provider: PROV, status: 'ACTIVE', resolution_mode: '',
@@ -39,8 +43,8 @@ vi.mock('../state/hooks', async (importOriginal) => {
   return {
     ...actual,
     useLiveAgreement: () => ({
-      st: ACTIVE, settlement: null, deadlock: null, loading: false,
-      error: null, degraded: false, refreshedAt: Date.now(), refresh: vi.fn(),
+      st: live.st, settlement: null, deadlock: null, loading: false,
+      error: live.error, degraded: false, refreshedAt: Date.now(), refresh,
     }),
     useWriteAction: () => ({
       tx: { phase: 'idle' as const }, busy: false, run, reset: vi.fn(), resume: vi.fn(),
@@ -65,6 +69,7 @@ describe('open_dispute argument collection', () => {
   beforeEach(() => {
     run.mockClear();
     localStorage.clear();
+    live = { st: ACTIVE, error: null };
   });
 
   it('disables confirmation until an incident window is entered', async () => {
@@ -100,5 +105,78 @@ describe('open_dispute argument collection', () => {
     const confirm = within(dialog).getByRole('button', { name: 'Open dispute' }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The unreadable-contract branch, reached when a deployment finalized but no
+ * contract exists at the address — tx 0x0c8e748c… lands here.
+ *
+ * The old Retry button called refresh() and rendered nothing new, so a repeat
+ * failure was indistinguishable from a dead button. These tests pin that every
+ * press produces a visible loading state and a visible, timestamped outcome.
+ */
+describe('unreadable agreement — Check again', () => {
+  const ADDRESS = '0xc09d70CE30BAd8ce8519C40Ef12C037B9cfBd99f';
+
+  beforeEach(() => {
+    refresh.mockReset();
+    localStorage.clear();
+    live = { st: null, error: 'contract not found at address' };
+  });
+
+  const renderView = () => render(<AgreementView address={ADDRESS} />);
+
+  it('warns that the address may hold no agreement and offers no funding path', async () => {
+    renderView();
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent',
+      expect.stringContaining('No readable agreement at this address'));
+    // Nothing that could move money may be reachable from this state.
+    expect(screen.queryByRole('button', { name: /fund/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /invite/i })).toBeNull();
+  });
+
+  it('shows a loading state while checking, then a failure outcome', async () => {
+    let release: (v: { ok: boolean; error?: string }) => void = () => {};
+    refresh.mockImplementation(() => new Promise((res) => { release = res; }));
+    renderView();
+
+    const button = await screen.findByRole('button', { name: 'Check again' });
+    expect(screen.getByRole('status').textContent).toMatch(/Not checked/i);
+
+    fireEvent.click(button);
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'Checking…' }),
+    ).toBeTruthy());
+    expect((screen.getByRole('button', { name: 'Checking…' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole('status').textContent).toMatch(/Re-reading the contract/i);
+
+    release({ ok: false, error: 'contract not found at address' });
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/Still unreadable/i));
+    expect(screen.getByRole('status').textContent).toMatch(/contract not found/i);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a distinct, timestamped outcome on every press', async () => {
+    refresh.mockResolvedValue({ ok: false, error: 'contract not found at address' });
+    renderView();
+    const button = await screen.findByRole('button', { name: 'Check again' });
+
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/Still unreadable/i));
+    const first = screen.getByRole('status').textContent;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
+    // Same error, but the outcome is re-stated rather than leaving a dead button.
+    expect(screen.getByRole('status').textContent).toMatch(/Still unreadable/i);
+    expect(first).toBeTruthy();
+  });
+
+  it('reports success when the contract becomes readable', async () => {
+    refresh.mockResolvedValue({ ok: true });
+    renderView();
+    fireEvent.click(await screen.findByRole('button', { name: 'Check again' }));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/read successfully/i));
   });
 });

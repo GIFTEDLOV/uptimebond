@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import contractSource from '../contract/uptime_bond.py?raw';
 import {
   DEADLOCK_MIN_SECONDS, OUTCOME_SCHEDULE, SERVICE_CATEGORIES, EXPLORER,
 } from '../config';
 import {
-  deployContract, fmtGen, pollTx, recoverDeployedAddress, shortAddr, type DeployArgs,
+  deployContract, fmtGen, pollTx, shortAddr, type DeployArgs,
 } from '../chain';
 import {
   checkDeadlockSeconds, checkEvidenceUrl, checkProvider, checkRefundBps, isAddress, parseEscrowGen,
@@ -16,6 +16,8 @@ import {
 } from '../lib/registry';
 import { useWallet } from '../state/wallet';
 import { TxProgress } from '../components/Panels';
+import { DeploymentUnverified } from '../components/DeploymentUnverified';
+import { verifyDeployment, type DeployVerification } from '../lib/deployment';
 import type { TxTracker } from '../chain';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
@@ -43,9 +45,12 @@ export function Create() {
   const [agreed, setAgreed] = useState(false);
   const [evChecks, setEvChecks] = useState<Record<string, EvidenceResult | 'loading'>>({});
 
-  // Deploy tracking
+  // Deploy tracking. `deployedAddr` is set ONLY after verifyDeployment passes
+  // every check — a finalized receipt naming an address is not a deployment.
   const [deployTx, setDeployTx] = useState<TxTracker>({ phase: 'idle' });
   const [deployedAddr, setDeployedAddr] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verification, setVerification] = useState<DeployVerification | null>(null);
 
   useEffect(() => { document.title = 'Create Agreement — UptimeBond'; }, []);
 
@@ -56,7 +61,11 @@ export function Create() {
       const p = pending[pending.length - 1];
       setStep(6);
       setDeployTx({ phase: 'submitted', method: 'deploy', hash: p.hash, startedAt: p.startedAt });
-      void trackDeploy(p.hash);
+      void trackDeploy(
+        p.hash,
+        p.sender ?? '',
+        typeof p.args?.provider === 'string' ? p.args.provider : '',
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -91,26 +100,50 @@ export function Create() {
     setEvChecks((p) => ({ ...p, [k]: r }));
   };
 
-  async function trackDeploy(hash: string) {
+  /**
+   * Verify a finalized deployment end to end, then record it.
+   *
+   * Nothing is written to the local registry and no address is surfaced as an
+   * agreement unless every check passes — otherwise a receipt that names a
+   * contract the chain never materialised would become a fundable entry.
+   */
+  const runVerification = useCallback(async (hash: string, senderAddr: string, providerAddr: string) => {
+    setVerifying(true);
+    try {
+      const v = await verifyDeployment({ hash, sender: senderAddr, provider: providerAddr });
+      setVerification(v);
+      if (v.ok && v.address) {
+        setDeployedAddr(v.address);
+        removePendingDeploy(hash);
+        upsertAgreement({
+          address: v.address, source: 'created', role: 'customer',
+          serviceLabel: f.serviceLabel || undefined, providerLabel: f.providerLabel || undefined,
+          notes: escrow.atto?.toString(), lastStatus: v.state?.status ?? 'AWAITING_FUNDING',
+          createdAt: Date.now(),
+        });
+      } else {
+        setDeployedAddr(null);
+      }
+      return v;
+    } finally {
+      setVerifying(false);
+    }
+  }, [f.serviceLabel, f.providerLabel, escrow.atto]);
+
+  async function trackDeploy(hash: string, senderAddr: string, providerAddr: string) {
     const started = Date.now();
     const timer = window.setInterval(async () => {
       const t = await pollTx(hash);
       setDeployTx((prev) => ({ ...t, method: 'deploy', startedAt: prev.startedAt ?? started }));
       if (t.phase === 'finalized') {
         window.clearInterval(timer);
-        const addr = await recoverDeployedAddress(hash);
-        if (addr) {
-          setDeployedAddr(addr);
-          removePendingDeploy(hash);
-          upsertAgreement({
-            address: addr, source: 'created', role: 'customer',
-            serviceLabel: f.serviceLabel || undefined, providerLabel: f.providerLabel || undefined,
-            notes: escrow.atto?.toString(), lastStatus: 'AWAITING_FUNDING', createdAt: Date.now(),
-          });
-        }
+        await runVerification(hash, senderAddr, providerAddr);
       } else if (t.phase === 'execution-error' || t.phase === 'failed') {
         window.clearInterval(timer);
         removePendingDeploy(hash);
+        // Still run verification so the panel can name the exact failing check
+        // and show the execution result rather than a bare error.
+        await runVerification(hash, senderAddr, providerAddr);
       }
     }, 15000);
   }
@@ -136,9 +169,9 @@ export function Create() {
     }
     // Persist BEFORE tracking so an interrupted deploy resumes, never repeats.
     addPendingDeploy({ hash, startedAt: Date.now(), args: args as unknown as Record<string, unknown>,
-      serviceLabel: f.serviceLabel, providerLabel: f.providerLabel });
+      serviceLabel: f.serviceLabel, providerLabel: f.providerLabel, sender: wallet.account });
     setDeployTx({ phase: 'submitted', method: 'deploy', hash, startedAt: Date.now() });
-    void trackDeploy(hash);
+    void trackDeploy(hash, wallet.account, f.provider);
   };
 
   return (
@@ -342,9 +375,10 @@ export function Create() {
             {!deployedAddr ? (
               <>
                 <p className="muted">
-                  Deploys the UptimeBond contract from your wallet. A transaction hash is not success —
-                  the app tracks it through consensus and finalization, then recovers the contract
-                  address from the receipt. An interrupted deploy resumes here rather than redeploying.
+                  Deploys the UptimeBond contract from your wallet. Neither a transaction hash nor
+                  a finalized receipt is success — the app reads the contract back off-chain and
+                  checks it really exists, is yours, and is awaiting funding before calling it
+                  deployed. An interrupted deploy resumes here rather than redeploying.
                 </p>
                 {deployTx.phase === 'idle' && (
                   <button onClick={() => void deploy()} disabled={!wallet.account || wallet.wrongChain}>
@@ -352,7 +386,26 @@ export function Create() {
                   </button>
                 )}
                 <TxProgress tx={deployTx} onDismiss={() => setDeployTx({ phase: 'idle' })} />
-                {(deployTx.phase === 'failed' || deployTx.phase === 'execution-error') && (
+
+                {verifying && (
+                  <p className="muted" role="status">Verifying the deployment on-chain…</p>
+                )}
+
+                {verification && !verification.ok && !verifying && (
+                  <DeploymentUnverified
+                    v={verification}
+                    hash={deployTx.hash}
+                    busy={verifying}
+                    onRecheck={() => {
+                      if (deployTx.hash) {
+                        void runVerification(deployTx.hash, wallet.account ?? '', f.provider);
+                      }
+                    }}
+                  />
+                )}
+
+                {(deployTx.phase === 'failed' || deployTx.phase === 'execution-error')
+                  && !verification && (
                   <button onClick={() => void deploy()}>Retry deploy</button>
                 )}
               </>

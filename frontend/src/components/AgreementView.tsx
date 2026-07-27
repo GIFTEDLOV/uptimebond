@@ -13,12 +13,16 @@ import {
 /** Full agreement detail. Live-state driven; every action is gated by the
  *  contract-confirmed role and the current status/deadlines. */
 export function AgreementView({
-  address, fundAtto, incidentWindow, compact,
+  address, fundAtto, incidentWindow, compact, onReadable,
 }: {
   address: string;
   fundAtto?: bigint;
   incidentWindow?: string;
   compact?: boolean;
+  /** Reports whether a real agreement could be read at this address, so the
+   *  page around it can withhold Invite and Save. A finalized deployment is
+   *  not enough — the contract has to answer. */
+  onReadable?: (readable: boolean) => void;
 }) {
   const wallet = useWallet();
   const { st, settlement, deadlock, loading, error, degraded, refreshedAt, refresh } = useLiveAgreement(address);
@@ -31,7 +35,25 @@ export function AgreementView({
   // caller's suggestion when there is one.
   const [incident, setIncident] = useState(incidentWindow ?? '');
 
+  // Retry is its own state machine. Deriving it from `error` alone cannot tell
+  // "failed again with the same message" from "the click did nothing", which is
+  // exactly how the previous Retry button appeared unresponsive.
+  type Retry =
+    | { phase: 'idle' } | { phase: 'busy' }
+    | { phase: 'ok'; at: number } | { phase: 'fail'; at: number; message: string };
+  const [retry, setRetry] = useState<Retry>({ phase: 'idle' });
+
+  const runRetry = async () => {
+    setRetry({ phase: 'busy' });
+    const r = await refresh();
+    setRetry(r.ok
+      ? { phase: 'ok', at: Date.now() }
+      : { phase: 'fail', at: Date.now(), message: r.error ?? 'unknown error' });
+  };
+
   const role = roleFor(wallet.account, st);
+
+  useEffect(() => { onReadable?.(Boolean(st)); }, [st, onReadable]);
 
   // Evidence sources live on-chain (immutable). Read once per address.
   useEffect(() => {
@@ -80,10 +102,36 @@ export function AgreementView({
   if (!st && error) {
     return (
       <div className="card">
-        <div className="notice error">
-          Could not read this contract: {error}
-          <div style={{ marginTop: 10 }}><button className="ghost" onClick={() => void refresh()}>Retry</button></div>
+        <div className="notice error" role="alert">
+          <strong>No readable agreement at this address.</strong> {error}
+          <p className="small" style={{ margin: '10px 0 0' }}>
+            A finalized deployment does not guarantee a contract exists here. If this address
+            never becomes readable, that transaction produced no usable agreement — do not fund
+            it.
+          </p>
         </div>
+
+        <div className="hero-cta" style={{ marginTop: 4 }}>
+          <button onClick={() => void runRetry()} disabled={retry.phase === 'busy'}>
+            {retry.phase === 'busy' ? 'Checking…' : 'Check again'}
+          </button>
+          <a
+            href={`${EXPLORER}/address/${address}`}
+            target="_blank" rel="noopener noreferrer" className="btn-ghost"
+          >
+            Open in explorer ↗
+          </a>
+        </div>
+
+        {/* The outcome of the last check, always rendered so a repeat failure
+            is visibly a new result rather than a button that did nothing. */}
+        <p className="retry-status" role="status" aria-live="polite">
+          {retry.phase === 'busy' && 'Re-reading the contract from the network…'}
+          {retry.phase === 'ok' && `Contract read successfully at ${new Date(retry.at).toLocaleTimeString()}.`}
+          {retry.phase === 'fail'
+            && `Still unreadable at ${new Date(retry.at).toLocaleTimeString()} — ${retry.message}`}
+          {retry.phase === 'idle' && 'Not checked since the page loaded.'}
+        </p>
       </div>
     );
   }

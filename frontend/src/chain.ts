@@ -282,7 +282,10 @@ export async function deployContract(
 
 /** Recover a deployed contract address from its deploy transaction, via the RPC
  *  (CORS-open). The decoded deploy data carries the address once committed.
- *  Returns null while still pending so the caller keeps waiting, never redeploys. */
+ *  Returns null while still pending so the caller keeps waiting, never redeploys.
+ *
+ *  An address here means only that the receipt names one. It does NOT mean a
+ *  contract exists at it — see `verifyDeployment`. */
 export async function recoverDeployedAddress(hash: string): Promise<string | null> {
   try {
     const tx = (await readClient().getTransaction({ hash: hash as never })) as unknown as {
@@ -294,6 +297,48 @@ export async function recoverDeployedAddress(hash: string): Promise<string | nul
   } catch {
     return null;
   }
+}
+
+/** The finalized deploy receipt, reduced to the fields deployment verification
+ *  needs. `contractAddress` is what the receipt claims; `recipient` is the
+ *  envelope target. For a deploy they must agree — a divergence means the
+ *  address cannot be trusted. */
+export interface DeployReceipt {
+  statusName: string;
+  executionResultName: string;
+  contractAddress: string | null;
+  recipient: string | null;
+  sender: string | null;
+}
+
+export async function readDeployReceipt(hash: string): Promise<DeployReceipt | null> {
+  try {
+    const tx = (await readClient().getTransaction({ hash: hash as never })) as unknown as {
+      statusName?: string;
+      txExecutionResultName?: string;
+      txDataDecoded?: { contractAddress?: string };
+      data?: { contract_address?: string };
+      recipient?: string;
+      sender?: string;
+    };
+    if (!tx) return null;
+    return {
+      statusName: String(tx.statusName ?? ''),
+      executionResultName: String(tx.txExecutionResultName ?? ''),
+      contractAddress: tx.txDataDecoded?.contractAddress ?? tx.data?.contract_address ?? null,
+      recipient: tx.recipient ?? null,
+      sender: tx.sender ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch a deployed contract's source. Throws when no contract exists at the
+ *  address — which is exactly the signal that a receipt-named address is not a
+ *  real deployment. */
+export async function getContractCode(address: string): Promise<string> {
+  return await readClient().getContractCode(address as `0x${string}`);
 }
 
 // ------------------------------------------------------------------- balances

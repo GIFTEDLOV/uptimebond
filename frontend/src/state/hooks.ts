@@ -8,6 +8,27 @@ import {
 import { clearPendingTx, setPendingTx, upsertAgreement, type RegistryRole } from '../lib/registry';
 import { sameAddress } from '../lib/validation';
 
+/**
+ * Reduce an RPC error to the one line a person needs.
+ *
+ * viem and genlayer-js raise multi-line diagnostics ending in a library
+ * version footer. Surfacing that verbatim buries the only part that matters —
+ * "contract not found at address 0x…" — under boilerplate.
+ */
+export function readableError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+  // The "Details:" line carries the address and the real cause; the first line
+  // is usually a generic "Requested resource not found."
+  const informative = lines.find((l) => /^Details:/i.test(l))
+    ?? lines.find((l) => /not found|revert|timeout|denied|invalid/i.test(l))
+    ?? lines[0] ?? raw;
+  return informative
+    .replace(/^Details:\s*/i, '')
+    .replace(/\s*Version:\s*\S+\s*$/i, '')
+    .trim();
+}
+
 export interface LiveAgreement {
   st: AgreementState | null;
   settlement: SettlementStatus | null;
@@ -16,7 +37,11 @@ export interface LiveAgreement {
   error: string | null;
   degraded: boolean;
   refreshedAt: number | null;
-  refresh: () => Promise<void>;
+  /** Resolves with the outcome of this read. Callers that surface a Retry
+   *  control need it: `error` alone cannot distinguish "failed again with the
+   *  same message" from "nothing happened", which is what made the old Retry
+   *  button look dead. */
+  refresh: () => Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Live agreement reader with exponential backoff on transient RPC failure and
@@ -32,8 +57,8 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
   const failures = useRef(0);
 
-  const refresh = useCallback(async () => {
-    if (!address) { setSt(null); setLoading(false); return; }
+  const refresh = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+    if (!address) { setSt(null); setLoading(false); return { ok: false, error: 'No address.' }; }
     try {
       const [s, d, p] = await Promise.all([
         readAgreement(address),
@@ -44,11 +69,14 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
       setError(null); setDegraded(false); failures.current = 0;
       setRefreshedAt(Date.now());
       upsertAgreement({ address, lastStatus: s.status, lastOutcome: s.outcome || undefined, refreshedAt: Date.now() });
+      return { ok: true };
     } catch (e) {
       failures.current += 1;
       setDegraded(failures.current >= 2);
       // Keep the last good state visible; only show error if we never loaded.
-      setError(e instanceof Error ? e.message : String(e));
+      const message = readableError(e);
+      setError(message);
+      return { ok: false, error: message };
     } finally {
       setLoading(false);
     }

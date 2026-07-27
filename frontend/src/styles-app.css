@@ -523,3 +523,54 @@ summary { min-height: 34px; }
 
 /* A single address field does not need the full page measure. */
 .import-card { max-width: 720px; }
+
+/* ------------------------------------------------ deployment verification
+   Shown when a deploy finalized but could not be proven to have produced a
+   real, readable, correctly-owned agreement. Every check is listed with its
+   own outcome so the failing one is named rather than implied. */
+.deploy-unverified { margin-top: 22px; }
+.deploy-unverified .kv { margin-top: 18px; }
+
+ul.check-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ul.check-list li {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+ul.check-list li:last-child { border-bottom: none; }
+.check-mark {
+  width: 16px; height: 16px; border-radius: 50%; flex: none; margin-top: 2px;
+  border: 1px solid var(--line-2); position: relative;
+}
+li.pass .check-mark { background: var(--olive-bg); border-color: rgba(95, 107, 69, .5); }
+li.pass .check-mark::after {
+  content: ""; position: absolute; left: 4px; top: 4px; width: 7px; height: 4px;
+  border-left: 1.5px solid var(--olive-deep); border-bottom: 1.5px solid var(--olive-deep);
+  transform: rotate(-45deg);
+}
+li.fail .check-mark { background: var(--clay-bg); border-color: rgba(142, 59, 47, .5); }
+li.fail .check-mark::after,
+li.fail .check-mark::before {
+  content: ""; position: absolute; left: 7px; top: 3px; width: 1.5px; height: 8px;
+  background: var(--clay);
+}
+li.fail .check-mark::after { transform: rotate(45deg); }
+li.fail .check-mark::before { transform: rotate(-45deg); }
+li.skip .check-mark { background: var(--panel-2); opacity: .6; }
+
+.check-body { display: flex; flex-direction: column; gap: 3px; }
+.check-label { color: var(--ink); font-weight: 500; }
+li.skip .check-label { color: var(--muted); font-weight: 400; }
+.check-detail { color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+li.fail .check-detail { color: var(--clay); }
+
+.retry-status {
+  margin: 14px 0 0; font-size: 13.5px; color: var(--muted);
+  min-height: 1.5em; line-height: 1.5;
+}
+
+/* Available to screen readers, never painted — pairs a text outcome with each
+   icon so status is not conveyed by shape or colour alone. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}

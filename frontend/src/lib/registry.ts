@@ -104,6 +104,10 @@ export interface PendingDeploy {
   args: Record<string, unknown>;
   serviceLabel?: string;
   providerLabel?: string;
+  /** The wallet that signed the deployment. Persisted so a resumed deploy can
+   *  still verify that the contract's customer is the account that created it,
+   *  even if a different wallet is connected when the session resumes. */
+  sender?: string;
 }
 export function readPendingDeploys(): PendingDeploy[] {
   try {
