@@ -57,20 +57,49 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
   const failures = useRef(0);
 
+  /**
+   * Monotonic read generation.
+   *
+   * Two reads can be in flight across an address change, and RPC latency is not
+   * ordered: a slow read of agreement A can land after a fast read of B and
+   * paint A's escrow, status and payouts under B's address. Every read captures
+   * the generation it started in and discards its own result if the generation
+   * has moved on. Bumped on every address change and on unmount.
+   */
+  const generation = useRef(0);
+  const inFlight = useRef(false);
+
+  // Address changed: abandon everything from the previous contract immediately,
+  // so nothing from A is ever visible while B is on screen.
+  useEffect(() => {
+    generation.current += 1;
+    setSt(null); setSettlement(null); setDeadlock(null);
+    setError(null); setDegraded(false); setRefreshedAt(null);
+    setLoading(Boolean(address));
+    failures.current = 0;
+    inFlight.current = false;
+    return () => { generation.current += 1; };
+  }, [address]);
+
   const refresh = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
-    if (!address) { setSt(null); setLoading(false); return { ok: false, error: 'No address.' }; }
+    if (!address) { setLoading(false); return { ok: false, error: 'No address.' }; }
+    const mine = generation.current;
+    const stale = () => mine !== generation.current;
+    inFlight.current = true;
     try {
       const [s, d, p] = await Promise.all([
         readAgreement(address),
         readDeadlock(address).catch(() => null),
         readSettlement(address).catch(() => null),
       ]);
+      if (stale()) return { ok: false, error: 'Superseded by a newer address.' };
       setSt(s); setDeadlock(d); setSettlement(p);
       setError(null); setDegraded(false); failures.current = 0;
       setRefreshedAt(Date.now());
       upsertAgreement({ address, lastStatus: s.status, lastOutcome: s.outcome || undefined, refreshedAt: Date.now() });
       return { ok: true };
     } catch (e) {
+      if (stale()) return { ok: false, error: 'Superseded by a newer address.' };
       failures.current += 1;
       setDegraded(failures.current >= 2);
       // Keep the last good state visible; only show error if we never loaded.
@@ -78,26 +107,38 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
       setError(message);
       return { ok: false, error: message };
     } finally {
-      setLoading(false);
+      inFlight.current = false;
+      if (!stale()) setLoading(false);
     }
   }, [address]);
 
-  useEffect(() => { setLoading(true); void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
 
+  /**
+   * Single-flight recursive timeout, not setInterval.
+   *
+   * setInterval with an async callback fires on a fixed schedule regardless of
+   * whether the previous read finished, so a slow network stacks overlapping
+   * RPC calls whose responses can land out of order. The next read is scheduled
+   * only after the previous one settles, and a read already in flight is never
+   * doubled up.
+   */
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
+    let timer = 0;
+
     const tick = () => {
       // Back off when failing: 20s, 40s, 80s, capped at 2m.
       const delay = Math.min(intervalMs * 2 ** Math.min(failures.current, 3), 120000);
       timer = window.setTimeout(async () => {
         if (cancelled) return;
-        await refresh();
-        tick();
+        if (!inFlight.current) await refresh();
+        if (!cancelled) tick();
       }, delay);
     };
-    let timer = 0;
     tick();
+
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [address, refresh, intervalMs]);
 
@@ -162,24 +203,46 @@ export interface WriteAction {
  *  a hash exists. */
 export function useWriteAction(onSettled?: () => void): WriteAction {
   const [tx, setTx] = useState<TxTracker>({ phase: 'idle' });
-  const pollRef = useRef<number | null>(null);
-  const stop = () => { if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; } };
-  useEffect(() => stop, []);
+  const timerRef = useRef<number | null>(null);
+  /** Bumped whenever tracking is stopped or replaced, so a poll already in
+   *  flight cannot write its result over a newer transaction's state. */
+  const trackGen = useRef(0);
 
+  const stop = useCallback(() => {
+    trackGen.current += 1;
+    if (timerRef.current !== null) { window.clearTimeout(timerRef.current); timerRef.current = null; }
+  }, []);
+
+  useEffect(() => () => { stop(); }, [stop]);
+
+  /**
+   * Single-flight recursive timeout. The previous implementation used
+   * setInterval with an async callback, which kept firing while a poll was
+   * still awaiting — overlapping RPC calls whose responses could land out of
+   * order and rewind the tracker to an earlier phase.
+   */
   const track = useCallback((address: string, hash: string, method: string, startedAt: number) => {
     stop();
-    pollRef.current = window.setInterval(async () => {
-      const t = await pollTx(hash);
-      setTx((prev) => ({ ...t, method, startedAt: prev.startedAt ?? startedAt }));
-      if (t.phase === 'finalized' || t.phase === 'execution-error' || t.phase === 'failed') {
-        stop();
-        clearPendingTx(address);
-        onSettled?.();
-      } else if (t.phase === 'consensus-accepted') {
-        onSettled?.();
-      }
-    }, 15000);
-  }, [onSettled]);
+    const mine = trackGen.current;
+    const schedule = () => {
+      timerRef.current = window.setTimeout(async () => {
+        if (mine !== trackGen.current) return;
+        const t = await pollTx(hash);
+        if (mine !== trackGen.current) return;
+        setTx((prev) => ({ ...t, method, startedAt: prev.startedAt ?? startedAt }));
+        if (t.phase === 'finalized' || t.phase === 'execution-error'
+            || t.phase === 'failed' || t.phase === 'unknown') {
+          stop();
+          clearPendingTx(address);
+          onSettled?.();
+          return;
+        }
+        if (t.phase === 'consensus-accepted') onSettled?.();
+        schedule();
+      }, 15000);
+    };
+    schedule();
+  }, [onSettled, stop]);
 
   const run: WriteAction['run'] = useCallback(async ({ method, args, valueWei, account, provider, address }) => {
     stop();
@@ -198,7 +261,7 @@ export function useWriteAction(onSettled?: () => void): WriteAction {
     setPendingTx(address, { hash, method, startedAt });
     setTx({ phase: 'submitted', method, hash, startedAt });
     track(address, hash, method, startedAt);
-  }, [track]);
+  }, [track, stop]);
 
   const resume: WriteAction['resume'] = useCallback((address, hash, method, startedAt) => {
     setTx({ phase: 'submitted', method, hash, startedAt });

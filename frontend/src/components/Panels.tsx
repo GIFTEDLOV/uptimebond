@@ -446,8 +446,8 @@ const PHASE_COPY: Record<string, { title: string; body: string; tone: string }> 
     tone: 'pending',
   },
   'consensus-accepted': {
-    title: 'Consensus accepted · execution succeeded',
-    body: 'Validators agreed and the contract executed successfully. The transaction can still be appealed until it finalizes.',
+    title: 'Consensus accepted · execution confirmed',
+    body: 'Validators agreed and the node reported a successful execution result. The transaction can still be appealed until it finalizes, and the resulting state is only verified once the app reads it back.',
     tone: 'ok',
   },
   finalized: {

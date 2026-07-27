@@ -40,17 +40,22 @@ export function availableActions(ctx: ActionContext): ActionDef[] {
   const status = st.status;
 
   if (status === 'AWAITING_FUNDING' && role === 'customer') {
-    out.push({
-      method: 'fund', label: 'Fund escrow', tone: 'primary',
-      consequence: 'Transfers your escrow into the contract and moves the agreement to “awaiting provider acceptance”. Payable.',
-      valueWei: ctx.fundAtto,
-      roles: ['customer'],
-    });
-    out.push({
-      method: 'cancel_before_acceptance', label: 'Cancel agreement', tone: 'danger',
-      consequence: 'Withdraws before the provider commits. Refunds the full escrow to you and closes the agreement.',
-      roles: ['customer'],
-    });
+    // Fund is payable. An undefined amount would be sent as 0 by the write
+    // path, producing a zero-value payable call that either reverts or funds
+    // nothing while looking like it worked. The action is simply not offered
+    // unless a positive amount is known — the UI prompts for one instead.
+    if (typeof ctx.fundAtto === 'bigint' && ctx.fundAtto > 0n) {
+      out.push({
+        method: 'fund', label: 'Fund escrow', tone: 'primary',
+        consequence: 'Transfers your escrow into the contract and moves the agreement to “awaiting provider acceptance”. Payable.',
+        valueWei: ctx.fundAtto,
+        roles: ['customer'],
+      });
+    }
+    // cancel_before_acceptance is NOT valid here. contracts/uptime_bond.py
+    // requires status == AWAITING_PROVIDER_ACCEPTANCE; offering it before
+    // funding surfaces a button that the contract deterministically reverts,
+    // ~30 minutes after the signature.
   }
 
   if (status === 'AWAITING_PROVIDER_ACCEPTANCE') {

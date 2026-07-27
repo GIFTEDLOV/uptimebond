@@ -19,8 +19,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const GLM = 'file:///C:/Users/DELL/AppData/Roaming/npm/node_modules/genlayer/node_modules';
-const gljs = await import(`${GLM}/genlayer-js/dist/index.js`);
+import { gljs } from './sdk.mjs';
+
 const { createClient, chains } = gljs;
 
 const argv = process.argv.slice(2);

@@ -87,7 +87,11 @@ check('step 2 advances', await next());
 await new Promise((r) => setTimeout(r, 250));
 await setInputs('input[type=url]', URLS);
 await new Promise((r) => setTimeout(r, 250));
-check('step 3 accepts the four evidence URLs', await next());
+// Each source must pass a live reachability test before the step advances.
+await page.evaluate(() => [...document.querySelectorAll('button')]
+  .filter((b) => /^(Test|Re-test)$/.test(b.textContent.trim())).forEach((b) => b.click()));
+await new Promise((r) => setTimeout(r, 6000));
+check('step 3 accepts the four tested evidence URLs', await next());
 await new Promise((r) => setTimeout(r, 250));
 check('step 4 advances with defaults', await next());
 await new Promise((r) => setTimeout(r, 400));

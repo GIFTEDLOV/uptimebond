@@ -11,12 +11,15 @@ import type { DeployVerification } from '../lib/deployment';
  * funding it would send GEN to an address with no code to receive it.
  */
 export function DeploymentUnverified({
-  v, hash, busy, onRecheck,
+  v, hash, busy, archived, onRecheck, onArchive,
 }: {
   v: DeployVerification;
   hash?: string;
   busy: boolean;
+  /** True once the user has put this deployment aside. */
+  archived?: boolean;
   onRecheck: () => void;
+  onArchive: () => void;
 }) {
   const failed = v.failed;
   const title = v.executionResult && v.executionResult !== 'FINISHED_WITH_RETURN'
@@ -75,17 +78,30 @@ export function DeploymentUnverified({
       </ul>
 
       <div className="hero-cta" style={{ marginTop: 22 }}>
-        <button onClick={onRecheck} disabled={busy}>
+        <button onClick={onRecheck} disabled={busy || archived}>
           {busy ? 'Checking…' : 'Run verification again'}
         </button>
+        {!archived && (
+          <button className="ghost" onClick={onArchive} disabled={busy}>
+            Archive this deployment
+          </button>
+        )}
       </div>
 
-      <p className="muted small" style={{ marginTop: 16 }}>
-        Funding and invitation stay disabled until every check passes. Do not redeploy from this
-        screen — the transaction above is already final, and a second deployment would create a
-        separate agreement. If the address never becomes readable, that transaction produced no
-        usable contract and nothing was escrowed.
-      </p>
+      {archived ? (
+        <div className="notice" role="status" style={{ marginTop: 16 }}>
+          <strong>Archived.</strong> The transaction record is kept for the audit trail but will
+          no longer be resumed automatically. Nothing was deleted and nothing was redeployed. If
+          you want a working agreement, start a new one — this hash stays yours to reference.
+        </div>
+      ) : (
+        <p className="muted small" style={{ marginTop: 16 }}>
+          Funding and invitation stay disabled until every check passes. Do not redeploy from this
+          screen — the transaction above is already final, and a second deployment would create a
+          separate agreement. If the address never becomes readable, that transaction produced no
+          usable contract and nothing was escrowed; archive it to stop the app resuming it.
+        </p>
+      )}
     </div>
   );
 }

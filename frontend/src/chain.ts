@@ -30,10 +30,16 @@ export interface TxTracker {
   method?: string;
   consensusStatus?: string;
   executionResult?: string;
+  /** AGREE / DISAGREE — the settled consensus result, when the node reports one. */
+  consensusResult?: string;
   validatorVotes?: string[];
   error?: string;
   startedAt?: number;
-  /** True only once execution is confirmed successful. */
+  /**
+   * True only when consensus agreed AND the execution result is explicitly one
+   * of the successful ones. Never inferred from status: a FINALIZED transaction
+   * with no execution result, or with an unrecognised one, is not a success.
+   */
   succeeded?: boolean;
 }
 
@@ -147,8 +153,15 @@ interface RpcTx {
   statusName?: string;
   status?: string | number;
   txExecutionResultName?: string;
+  resultName?: string;
   txDataDecoded?: { contractAddress?: string };
 }
+
+/**
+ * The only execution results that mean the contract ran to completion.
+ * Anything else — including an absent result — is not success.
+ */
+const SUCCESSFUL_EXECUTION = new Set(['FINISHED_WITH_RETURN', 'FINISHED_WITH_NO_RETURN']);
 
 /**
  * Poll transaction status through the JSON-RPC via genlayer-js.
@@ -171,24 +184,43 @@ export async function pollTx(hash: string): Promise<TxTracker> {
 
   const status = String(tx.statusName ?? tx.status ?? '').toUpperCase();
   const exec = tx.txExecutionResultName ?? undefined;
+  const consensusResult = tx.resultName ? String(tx.resultName).toUpperCase() : undefined;
+  const base = { hash, consensusStatus: status, executionResult: exec, consensusResult };
 
   if (BAD.has(status.toLowerCase())) {
-    return { phase: 'failed', hash, consensusStatus: status, executionResult: exec,
+    return { ...base, phase: 'failed',
       error: `Consensus did not accept this transaction (${status.toLowerCase()}).` };
   }
   if (exec && exec.includes('ERROR')) {
-    return { phase: 'execution-error', hash, consensusStatus: status, executionResult: exec,
+    return { ...base, phase: 'execution-error',
       error: 'Consensus accepted the transaction but contract execution failed.' };
   }
-  if (status === 'FINALIZED') {
-    return { phase: 'finalized', hash, consensusStatus: status, executionResult: exec, succeeded: true };
+  // A settled consensus result that is not agreement is a failure, whatever the
+  // status says. Only AGREE (or a node that reports no result at all) proceeds.
+  if (consensusResult && consensusResult !== 'AGREE'
+      && (status === 'FINALIZED' || status === 'ACCEPTED')) {
+    return { ...base, phase: 'failed',
+      error: `Validators did not agree on this transaction (${consensusResult}).` };
   }
-  if (status === 'ACCEPTED') {
-    return { phase: 'consensus-accepted', hash, consensusStatus: status, executionResult: exec,
-      succeeded: Boolean(exec && !exec.includes('ERROR')) };
+
+  if (status === 'FINALIZED' || status === 'ACCEPTED') {
+    const finalized = status === 'FINALIZED';
+    if (!exec) {
+      // Finalized or accepted with no execution result is NOT success. Reporting
+      // it as such is how a transaction that never ran gets treated as done.
+      return { ...base, phase: 'unknown',
+        error: `The transaction is ${status.toLowerCase()} but the node reported no execution `
+          + 'result. Do not assume it succeeded — confirm the on-chain state before retrying.' };
+    }
+    if (!SUCCESSFUL_EXECUTION.has(exec.toUpperCase())) {
+      return { ...base, phase: 'unknown',
+        error: `Unrecognised execution result "${exec}". Confirm the on-chain state before retrying.` };
+    }
+    return { ...base, phase: finalized ? 'finalized' : 'consensus-accepted', succeeded: true };
   }
-  if (PENDING.has(status.toLowerCase())) return { phase: 'pending-consensus', hash, consensusStatus: status };
-  return { phase: 'submitted', hash, consensusStatus: status };
+
+  if (PENDING.has(status.toLowerCase())) return { ...base, phase: 'pending-consensus' };
+  return { ...base, phase: 'submitted' };
 }
 
 // -------------------------------------------------------------------- writes

@@ -5,6 +5,9 @@ import { useWallet } from '../state/wallet';
 import { useLiveAgreement, useWriteAction, roleFor } from '../state/hooks';
 import { availableActions, type ActionDef } from '../lib/actions';
 import { getAgreement, upsertAgreement } from '../lib/registry';
+import {
+  checkPostcondition, providerRoleConfirmed, type PostconditionResult,
+} from '../lib/postconditions';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   Deadlock, EvidenceSources, LifecycleBar, Overview, Ruling, Settlement, StatusChip, TxProgress,
@@ -43,6 +46,24 @@ export function AgreementView({
     | { phase: 'ok'; at: number } | { phase: 'fail'; at: number; message: string };
   const [retry, setRetry] = useState<Retry>({ phase: 'idle' });
 
+  /** The last write submitted from this view, and what it intended. */
+  const [lastAction, setLastAction] =
+    useState<{ method: string; incidentWindow?: string } | null>(null);
+  const [postcondition, setPostcondition] = useState<PostconditionResult | null>(null);
+
+  // A different contract invalidates everything held about the previous one:
+  // the pending dialog, the retry outcome, the last action and its
+  // postcondition all belong to an address that is no longer on screen.
+  useEffect(() => {
+    setPending(null);
+    setRetry({ phase: 'idle' });
+    setLastAction(null);
+    setPostcondition(null);
+    setSources(null);
+    setIncident(incidentWindow ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
   const runRetry = async () => {
     setRetry({ phase: 'busy' });
     const r = await refresh();
@@ -54,6 +75,30 @@ export function AgreementView({
   const role = roleFor(wallet.account, st);
 
   useEffect(() => { onReadable?.(Boolean(st)); }, [st, onReadable]);
+
+  // Record the provider role only once the contract confirms it.
+  useEffect(() => {
+    if (providerRoleConfirmed(st, wallet.account)) {
+      upsertAgreement({ address, role: 'provider', source: 'invited' });
+    }
+  }, [st, wallet.account, address]);
+
+  // Once a write finalizes, assert what it was supposed to achieve. A
+  // successful execution result is not the same as the intended state change.
+  useEffect(() => {
+    if (!lastAction || !st) { return; }
+    if (write.tx.phase !== 'finalized' || !write.tx.succeeded) { return; }
+    setPostcondition(checkPostcondition({
+      method: lastAction.method,
+      st,
+      settlement,
+      expected: {
+        escrowAtto: fundAtto?.toString(),
+        incidentWindow: lastAction.incidentWindow,
+        sender: wallet.account ?? undefined,
+      },
+    }));
+  }, [write.tx.phase, write.tx.succeeded, st, settlement, lastAction, fundAtto, wallet.account]);
 
   // Evidence sources live on-chain (immutable). Read once per address.
   useEffect(() => {
@@ -92,7 +137,12 @@ export function AgreementView({
       method: a.method, args, valueWei: a.valueWei,
       account: wallet.account, provider: wallet.provider, address,
     });
-    if (a.method === 'accept_sla') upsertAgreement({ address, role: 'provider', source: 'invited' });
+    // The provider role is NOT saved here. A submitted accept_sla can revert,
+    // be rejected by consensus, or never finalize; recording the role now would
+    // mark the user as a party to an agreement they never joined. It is saved
+    // once live state confirms ACTIVE and the connected wallet is the provider
+    // — see the effect below.
+    setLastAction({ method: a.method, incidentWindow: a.method === 'open_dispute' ? incident.trim() : undefined });
     setPending(null);
   };
 
@@ -195,6 +245,20 @@ export function AgreementView({
       )}
 
       <TxProgress tx={write.tx} onDismiss={write.reset} />
+
+      {postcondition && postcondition.ok !== null && (
+        <div
+          className={`notice ${postcondition.ok ? 'ok' : 'error'}`}
+          role={postcondition.ok ? 'status' : 'alert'}
+        >
+          <strong>
+            {postcondition.ok
+              ? `${lastAction?.method}() confirmed on-chain.`
+              : `${lastAction?.method}() finalized but did not take effect.`}
+          </strong>{' '}
+          {postcondition.detail}
+        </div>
+      )}
 
       <div className="grid">
         <Ruling st={st} />

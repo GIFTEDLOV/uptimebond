@@ -8,6 +8,16 @@ export const EXPLORER = 'https://explorer-bradbury.genlayer.com';
 export const EXPLORER_API = `${EXPLORER}/api/v1`;
 
 export const SOURCE_COMMIT = 'ad0018207edfba936b4074d3f1ccb5a2df58ac3b';
+
+/** The exact genlayer-js this bundle was built against. Pinned in package.json
+ *  and asserted by e2e/reproducibility.mjs, so a deployment record can name the
+ *  SDK that produced it instead of leaving it to archaeology. */
+export const SDK_VERSION = '1.1.8';
+
+/** SHA-256 of contracts/uptime_bond.py as embedded in this bundle. Asserted
+ *  against the file itself in CI; recorded with every deployment. */
+export const CONTRACT_SOURCE_SHA256 =
+  '93e1ddb9d29c33fba65ac1ba9402d2a11454755faaf373b06e76a8fb906721a3';
 export const REPO = 'https://github.com/GIFTEDLOV/uptimebond';
 
 /** Canonical production origin. Used for invitation links and OG metadata. */

@@ -25,14 +25,17 @@
  */
 
 import {
-  getContractCode, readAgreement, readDeployReceipt,
-  type AgreementState,
+  getBalance, getContractCode, readAgreement, readDeadlockConfig, readDeployReceipt,
+  readEvidenceSources, type AgreementState,
 } from '../chain';
+import { sha256Hex } from './hash';
+import type { DeploymentDraft } from './registry';
 import { sameAddress } from './validation';
 
 export type DeployCheckId =
-  | 'finalized' | 'execution' | 'address' | 'code'
-  | 'state' | 'customer' | 'provider' | 'status';
+  | 'finalized' | 'execution' | 'address' | 'code' | 'source'
+  | 'state' | 'customer' | 'provider' | 'evidence' | 'deadlock'
+  | 'status' | 'escrow' | 'balance';
 
 export interface DeployCheck {
   id: DeployCheckId;
@@ -61,22 +64,33 @@ const LABELS: Record<DeployCheckId, string> = {
   execution: 'Execution finished with return',
   address: 'Contract address recovered from the receipt',
   code: 'Contract code present on-chain',
+  source: 'Deployed source matches the source we submitted',
   state: 'Agreement state readable',
   customer: 'Customer matches the deploying wallet',
   provider: 'Provider matches the submitted address',
+  evidence: 'All four evidence sources match what was submitted',
+  deadlock: 'Deadlock terms match what was submitted',
   status: 'Lifecycle status is awaiting funding',
+  escrow: 'Escrow is zero before funding',
+  balance: 'Contract balance is zero before funding',
 };
 
 const ORDER: DeployCheckId[] = [
-  'finalized', 'execution', 'address', 'code', 'state', 'customer', 'provider', 'status',
+  'finalized', 'execution', 'address', 'code', 'source', 'state',
+  'customer', 'provider', 'evidence', 'deadlock', 'status', 'escrow', 'balance',
 ];
 
 export interface VerifyInput {
   hash: string;
-  /** The wallet that signed the deployment. */
-  sender: string;
-  /** The provider address submitted to the constructor. */
-  provider: string;
+  /**
+   * The complete deployment intent, persisted at signing time.
+   *
+   * Verification compares the contract against what we meant to deploy, not
+   * against whatever the form or the connected wallet says now. Passing only
+   * sender and provider left the evidence URLs and deadlock terms — the terms
+   * that decide every future ruling and are immutable — entirely unchecked.
+   */
+  draft: DeploymentDraft;
 }
 
 /**
@@ -85,6 +99,7 @@ export interface VerifyInput {
  * never imply more was proven than actually was.
  */
 export async function verifyDeployment(input: VerifyInput): Promise<DeployVerification> {
+  const { draft } = input;
   const results = new Map<DeployCheckId, DeployCheck>();
   let consensusStatus = '';
   let executionResult = '';
@@ -147,8 +162,9 @@ export async function verifyDeployment(input: VerifyInput): Promise<DeployVerifi
   }
   pass('address', claimedAddress);
 
+  let code: string;
   try {
-    const code = await getContractCode(claimedAddress);
+    code = await getContractCode(claimedAddress);
     if (!code || code.length === 0) {
       fail('code', 'The node returned empty contract code for this address.');
       return finish();
@@ -159,6 +175,16 @@ export async function verifyDeployment(input: VerifyInput): Promise<DeployVerifi
       + 'so the transaction finalized without leaving a contract behind.');
     return finish();
   }
+
+  // The deployed bytes must be the bytes we sent. A mismatch means the address
+  // holds somebody else's contract, or a different build of ours.
+  const deployedSha = await sha256Hex(code);
+  if (draft.sourceSha256 && deployedSha !== draft.sourceSha256) {
+    fail('source', `The deployed source hashes to ${deployedSha.slice(0, 16)}…, not the `
+      + `${draft.sourceSha256.slice(0, 16)}… we submitted.`);
+    return finish();
+  }
+  pass('source', `sha256 ${deployedSha.slice(0, 16)}…`);
 
   try {
     state = await readAgreement(claimedAddress);
@@ -172,25 +198,91 @@ export async function verifyDeployment(input: VerifyInput): Promise<DeployVerifi
   }
   pass('state', 'get_state answered');
 
-  if (!sameAddress(state.customer, input.sender)) {
+  if (!sameAddress(state.customer, draft.sender)) {
     fail('customer', `The contract's customer is ${state.customer}, not the deploying `
-      + `wallet ${input.sender}. This is not your agreement.`);
+      + `wallet ${draft.sender}. This is not your agreement.`);
     return finish();
   }
   pass('customer', state.customer);
 
-  if (!sameAddress(state.provider, input.provider)) {
+  if (!sameAddress(state.provider, draft.provider)) {
     fail('provider', `The contract's provider is ${state.provider}, not the address you `
-      + `submitted (${input.provider}).`);
+      + `submitted (${draft.provider}).`);
     return finish();
   }
   pass('provider', state.provider);
+
+  // The four evidence sources are immutable and decide every future ruling.
+  // If any one of them is not what we submitted, the agreement is not ours in
+  // any meaningful sense — and nothing can be done about it after funding.
+  let sources: Record<string, string>;
+  try {
+    sources = await readEvidenceSources(claimedAddress);
+  } catch {
+    fail('evidence', 'The contract did not answer get_evidence_sources.');
+    return finish();
+  }
+  const expectedSources: Array<[string, string, string]> = [
+    ['sla_terms_url', 'SLA terms', draft.slaTermsUrl],
+    ['independent_monitor_url', 'independent monitor', draft.independentMonitorUrl],
+    ['provider_status_url', 'provider status', draft.providerStatusUrl],
+    ['maintenance_announcements_url', 'maintenance feed', draft.maintenanceAnnouncementsUrl],
+  ];
+  const badSource = expectedSources.find(([key, , want]) => (sources[key] ?? '') !== want);
+  if (badSource) {
+    fail('evidence', `The on-chain ${badSource[1]} URL is "${sources[badSource[0]] ?? '(missing)'}", `
+      + `not the "${badSource[2]}" that was submitted.`);
+    return finish();
+  }
+  pass('evidence', 'all four sources match');
+
+  // Deadlock terms decide the fallback split and when it becomes available.
+  try {
+    const cfg = await readDeadlockConfig(claimedAddress);
+    const mismatch = (
+      Number(cfg.deadlock_refund_bps) !== draft.deadlockRefundBps ? 'deadlock_refund_bps'
+        : Number(cfg.dispute_deadlock_seconds) !== draft.disputeDeadlockSeconds ? 'dispute_deadlock_seconds'
+          : Number(cfg.insufficient_evidence_deadlock_seconds) !== draft.insufficientEvidenceDeadlockSeconds
+            ? 'insufficient_evidence_deadlock_seconds' : null
+    );
+    if (mismatch) {
+      fail('deadlock', `On-chain ${mismatch} does not match the value submitted `
+        + `(${JSON.stringify(cfg)} vs ${draft.deadlockRefundBps}/${draft.disputeDeadlockSeconds}/`
+        + `${draft.insufficientEvidenceDeadlockSeconds}).`);
+      return finish();
+    }
+    pass('deadlock', `${draft.deadlockRefundBps} bps · ${draft.disputeDeadlockSeconds}s · `
+      + `${draft.insufficientEvidenceDeadlockSeconds}s`);
+  } catch {
+    fail('deadlock', 'The contract did not answer get_deadlock_config.');
+    return finish();
+  }
 
   if (state.status !== 'AWAITING_FUNDING') {
     fail('status', `The agreement is ${state.status}, not AWAITING_FUNDING.`);
     return finish();
   }
   pass('status', 'AWAITING_FUNDING');
+
+  // A fresh agreement holds nothing. Anything else means this is not the
+  // untouched contract we just created.
+  if (BigInt(state.escrow_atto || '0') !== 0n) {
+    fail('escrow', `Escrow is already ${state.escrow_atto} atto on a contract that should be unfunded.`);
+    return finish();
+  }
+  pass('escrow', '0');
+
+  try {
+    const balance = await getBalance(claimedAddress);
+    if (balance !== 0n) {
+      fail('balance', `The contract already holds ${balance} atto before funding.`);
+      return finish();
+    }
+    pass('balance', '0');
+  } catch {
+    fail('balance', 'The contract balance could not be read.');
+    return finish();
+  }
 
   return finish();
 }

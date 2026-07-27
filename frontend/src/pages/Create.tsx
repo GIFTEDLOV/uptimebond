@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import contractSource from '../contract/uptime_bond.py?raw';
 import {
@@ -12,12 +12,16 @@ import {
 } from '../lib/validation';
 import { fetchEvidence, type EvidenceResult } from '../lib/evidence';
 import {
-  addPendingDeploy, readPendingDeploys, removePendingDeploy, upsertAgreement,
+  addPendingDeploy, archivePendingDeploy, readActiveDeploys, removePendingDeploy,
+  upsertAgreement, type DeploymentDraft,
 } from '../lib/registry';
 import { useWallet } from '../state/wallet';
 import { TxProgress } from '../components/Panels';
 import { DeploymentUnverified } from '../components/DeploymentUnverified';
 import { verifyDeployment, type DeployVerification } from '../lib/deployment';
+import { sha256Hex } from '../lib/hash';
+import { BUILD_VERSION } from '../lib/health';
+import { SDK_VERSION } from '../config';
 import type { TxTracker } from '../chain';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
@@ -43,7 +47,16 @@ export function Create() {
   const [step, setStep] = useState<Step>(1);
   const [f, setF] = useState<Form>(EMPTY);
   const [agreed, setAgreed] = useState(false);
-  const [evChecks, setEvChecks] = useState<Record<string, EvidenceResult | 'loading'>>({});
+  /**
+   * Evidence reachability results, each bound to the exact URL that was tested.
+   *
+   * Storing only the result let an edited URL keep its predecessor's green
+   * HTTP 200: type a good URL, press Test, change one character, and the step
+   * still reported "tested". The URL is now part of the record and every check
+   * is matched against the current field value before it counts.
+   */
+  const [evChecks, setEvChecks] = useState<
+    Record<string, { url: string; result: EvidenceResult | 'loading' }>>({});
 
   // Deploy tracking. `deployedAddr` is set ONLY after verifyDeployment passes
   // every check — a finalized receipt naming an address is not a deployment.
@@ -51,22 +64,34 @@ export function Create() {
   const [deployedAddr, setDeployedAddr] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verification, setVerification] = useState<DeployVerification | null>(null);
+  const [draft, setDraft] = useState<DeploymentDraft | null>(null);
+  const [archived, setArchived] = useState(false);
+  const trackTimer = useRef<number | null>(null);
+  const trackGen = useRef(0);
 
   useEffect(() => { document.title = 'Create Agreement — UptimeBond'; }, []);
 
-  // Resume an interrupted deploy from a prior session.
+  /**
+   * Resume an interrupted deploy from a prior session.
+   *
+   * Only non-archived deploys are picked up, and the persisted draft supplies
+   * the sender and provider. Previously this passed the *currently connected*
+   * wallet and an empty provider, so a resumed verification could not check
+   * ownership at all and would accept a contract created by another account.
+   */
   useEffect(() => {
-    const pending = readPendingDeploys();
+    const pending = readActiveDeploys();
     if (pending.length && deployTx.phase === 'idle' && !deployedAddr) {
       const p = pending[pending.length - 1];
       setStep(6);
+      setDraft(p.draft);
       setDeployTx({ phase: 'submitted', method: 'deploy', hash: p.hash, startedAt: p.startedAt });
-      void trackDeploy(
-        p.hash,
-        p.sender ?? '',
-        typeof p.args?.provider === 'string' ? p.args.provider : '',
-      );
+      trackDeploy(p.hash, p.draft, p.startedAt);
     }
+    return () => {
+      trackGen.current += 1;
+      if (trackTimer.current !== null) window.clearTimeout(trackTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -82,10 +107,24 @@ export function Create() {
     ['statusUrl', 'Provider status'], ['maintUrl', 'Maintenance feed'],
   ];
 
+  /** A passing test for the URL currently in the field — nothing older counts. */
+  const evidencePassed = (k: keyof Form) => {
+    const rec = evChecks[k as string];
+    const url = (f[k] as string).trim();
+    return !!rec && rec.url === url && rec.result !== 'loading' && rec.result.ok === true;
+  };
+  const evidenceResultFor = (k: keyof Form) => {
+    const rec = evChecks[k as string];
+    return rec && rec.url === (f[k] as string).trim() ? rec.result : undefined;
+  };
+
   const stepValid: Record<Step, boolean> = {
     1: !!wallet.account && isAddress(f.provider) && providerCheck.ok,
     2: !!f.category,
-    3: evUrls.every(([k]) => checkEvidenceUrl(f[k] as string).ok),
+    // Every source must be syntactically valid AND currently proven reachable.
+    // Validators re-fetch these during adjudication; a URL that 404s guarantees
+    // a failed ruling, and the terms are immutable once deployed.
+    3: evUrls.every(([k]) => checkEvidenceUrl(f[k] as string).ok && evidencePassed(k)),
     4: escrow.ok && checkRefundBps(f.deadlockPct * 100).ok
       && checkDeadlockSeconds(disputeSec).ok && checkDeadlockSeconds(ieSec).ok,
     5: agreed,
@@ -93,11 +132,13 @@ export function Create() {
   };
 
   const testUrl = async (k: keyof Form) => {
-    const url = f[k] as string;
+    const url = (f[k] as string).trim();
     if (!checkEvidenceUrl(url).ok) return;
-    setEvChecks((p) => ({ ...p, [k]: 'loading' }));
+    setEvChecks((p) => ({ ...p, [k]: { url, result: 'loading' } }));
     const r = await fetchEvidence(url);
-    setEvChecks((p) => ({ ...p, [k]: r }));
+    // Bind the result to the URL that produced it; if the field moved on while
+    // the request was in flight, the result is for a URL nobody is using.
+    setEvChecks((p) => ({ ...p, [k]: { url, result: r } }));
   };
 
   /**
@@ -107,18 +148,25 @@ export function Create() {
    * agreement unless every check passes — otherwise a receipt that names a
    * contract the chain never materialised would become a fundable entry.
    */
-  const runVerification = useCallback(async (hash: string, senderAddr: string, providerAddr: string) => {
+  const runVerification = useCallback(async (hash: string, draft: DeploymentDraft) => {
     setVerifying(true);
+    setDraft(draft);
     try {
-      const v = await verifyDeployment({ hash, sender: senderAddr, provider: providerAddr });
+      // Verification is driven entirely by the persisted draft — never by the
+      // form (which is empty after a reload) or the connected wallet (which may
+      // be a different account by then).
+      const v = await verifyDeployment({ hash, draft });
       setVerification(v);
       if (v.ok && v.address) {
         setDeployedAddr(v.address);
         removePendingDeploy(hash);
         upsertAgreement({
           address: v.address, source: 'created', role: 'customer',
-          serviceLabel: f.serviceLabel || undefined, providerLabel: f.providerLabel || undefined,
-          notes: escrow.atto?.toString(), lastStatus: v.state?.status ?? 'AWAITING_FUNDING',
+          serviceLabel: draft.serviceLabel || undefined,
+          providerLabel: draft.providerLabel || undefined,
+          notes: draft.notes || undefined,
+          escrowAtto: draft.escrowAtto,
+          lastStatus: v.state?.status ?? 'AWAITING_FUNDING',
           createdAt: Date.now(),
         });
       } else {
@@ -128,28 +176,33 @@ export function Create() {
     } finally {
       setVerifying(false);
     }
-  }, [f.serviceLabel, f.providerLabel, escrow.atto]);
+  }, []);
 
-  async function trackDeploy(hash: string, senderAddr: string, providerAddr: string) {
-    const started = Date.now();
-    const timer = window.setInterval(async () => {
-      const t = await pollTx(hash);
-      setDeployTx((prev) => ({ ...t, method: 'deploy', startedAt: prev.startedAt ?? started }));
-      if (t.phase === 'finalized') {
-        window.clearInterval(timer);
-        await runVerification(hash, senderAddr, providerAddr);
-      } else if (t.phase === 'execution-error' || t.phase === 'failed') {
-        window.clearInterval(timer);
-        removePendingDeploy(hash);
-        // Still run verification so the panel can name the exact failing check
-        // and show the execution result rather than a bare error.
-        await runVerification(hash, senderAddr, providerAddr);
-      }
-    }, 15000);
-  }
+  /** Single-flight recursive timeout; cancelled on unmount via trackRef. */
+  const trackDeploy = useCallback((hash: string, draft: DeploymentDraft, startedAt = Date.now()) => {
+    trackGen.current += 1;
+    const mine = trackGen.current;
+    const schedule = () => {
+      trackTimer.current = window.setTimeout(async () => {
+        if (mine !== trackGen.current) return;
+        const t = await pollTx(hash);
+        if (mine !== trackGen.current) return;
+        setDeployTx((prev) => ({ ...t, method: 'deploy', startedAt: prev.startedAt ?? startedAt }));
+        if (t.phase === 'finalized' || t.phase === 'execution-error'
+            || t.phase === 'failed' || t.phase === 'unknown') {
+          // Always verify, even after a failed execution, so the panel can name
+          // the exact failing check instead of showing a bare error.
+          await runVerification(hash, draft);
+          return;
+        }
+        schedule();
+      }, 15000);
+    };
+    schedule();
+  }, [runVerification]);
 
   const deploy = async () => {
-    if (!wallet.account || !wallet.provider || !escrow.ok) return;
+    if (!wallet.account || !wallet.provider || !escrow.ok || !escrow.atto) return;
     setDeployTx({ phase: 'awaiting-signature', method: 'deploy', startedAt: Date.now() });
     const args: DeployArgs = {
       provider: f.provider,
@@ -158,6 +211,27 @@ export function Create() {
       deadlock_refund_bps: f.deadlockPct * 100,
       dispute_deadlock_seconds: disputeSec, insufficient_evidence_deadlock_seconds: ieSec,
     };
+    // Everything needed to verify this deployment later, independent of the
+    // form and of whichever wallet happens to be connected at that point.
+    const draft: DeploymentDraft = {
+      sender: wallet.account,
+      provider: f.provider,
+      slaTermsUrl: f.slaUrl,
+      independentMonitorUrl: f.monitorUrl,
+      providerStatusUrl: f.statusUrl,
+      maintenanceAnnouncementsUrl: f.maintUrl,
+      deadlockRefundBps: f.deadlockPct * 100,
+      disputeDeadlockSeconds: disputeSec,
+      insufficientEvidenceDeadlockSeconds: ieSec,
+      escrowAtto: escrow.atto.toString(),
+      serviceLabel: f.serviceLabel || undefined,
+      providerLabel: f.providerLabel || undefined,
+      notes: f.notes || undefined,
+      sourceSha256: await sha256Hex(contractSource),
+      sdkVersion: SDK_VERSION,
+      buildVersion: BUILD_VERSION,
+    };
+
     let hash: string;
     try {
       hash = await deployContract(wallet.account, wallet.provider, contractSource, args);
@@ -168,10 +242,19 @@ export function Create() {
       return;
     }
     // Persist BEFORE tracking so an interrupted deploy resumes, never repeats.
-    addPendingDeploy({ hash, startedAt: Date.now(), args: args as unknown as Record<string, unknown>,
-      serviceLabel: f.serviceLabel, providerLabel: f.providerLabel, sender: wallet.account });
+    addPendingDeploy({ hash, startedAt: Date.now(), draft });
     setDeployTx({ phase: 'submitted', method: 'deploy', hash, startedAt: Date.now() });
-    void trackDeploy(hash, wallet.account, f.provider);
+    trackDeploy(hash, draft);
+  };
+
+  /** Put a permanently failed finalized deployment aside without deleting it. */
+  const archive = () => {
+    if (!deployTx.hash) return;
+    archivePendingDeploy(deployTx.hash,
+      verification?.failed?.label ?? verification?.executionResult ?? 'verification failed');
+    trackGen.current += 1;
+    if (trackTimer.current !== null) { window.clearTimeout(trackTimer.current); trackTimer.current = null; }
+    setArchived(true);
   };
 
   return (
@@ -262,16 +345,24 @@ export function Create() {
             {evUrls.map(([k, label]) => {
               const url = f[k] as string;
               const check = checkEvidenceUrl(url);
-              const res = evChecks[k];
+              // Only a result for the URL currently in the field is shown;
+              // editing the URL discards the previous one rather than leaving a
+              // stale green tick behind it.
+              const res = evidenceResultFor(k);
               return (
                 <div className="field" key={k}>
                   <span>{label} <span className="tag">{k === 'monitorUrl' ? 'Primary evidence' : k === 'slaUrl' ? 'Authoritative' : 'Corroborating'}</span></span>
                   <div className="import-row">
                     <input type="url" placeholder="https://…" value={url} onChange={(e) => set(k, e.target.value)} />
-                    <button className="ghost" type="button" onClick={() => void testUrl(k)} disabled={!check.ok}>Test</button>
+                    <button className="ghost" type="button" onClick={() => void testUrl(k)} disabled={!check.ok}>
+                      {evidencePassed(k) ? 'Re-test' : 'Test'}
+                    </button>
                   </div>
                   {url && !check.ok && <em className="err">{check.reason}</em>}
                   {check.warn && <em className="warn-text">⚠ {check.warn}</em>}
+                  {check.ok && url && !res && (
+                    <em className="warn-text">Not tested yet — press Test.</em>
+                  )}
                   {res === 'loading' && <em className="muted small">Testing…</em>}
                   {res && res !== 'loading' && (
                     <div className={`ev-result ${res.ok ? 'ok' : 'bad'}`}>
@@ -396,11 +487,11 @@ export function Create() {
                     v={verification}
                     hash={deployTx.hash}
                     busy={verifying}
+                    archived={archived}
                     onRecheck={() => {
-                      if (deployTx.hash) {
-                        void runVerification(deployTx.hash, wallet.account ?? '', f.provider);
-                      }
+                      if (deployTx.hash && draft) void runVerification(deployTx.hash, draft);
                     }}
+                    onArchive={archive}
                   />
                 )}
 

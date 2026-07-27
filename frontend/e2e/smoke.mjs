@@ -98,7 +98,11 @@ const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox']
   await new Promise((r) => setTimeout(r, 300));
   check('step 2 (service) advances', await nextBtn());                  // -> Evidence
   await new Promise((r) => setTimeout(r, 300));
-  // Fill evidence URLs
+  // Fill evidence URLs with the real, commit-pinned sources. The wizard now
+  // requires a *successful reachability test* for each one, not just valid
+  // syntax — an unreachable source guarantees a failed ruling and cannot be
+  // changed after deployment.
+  const EV = 'https://raw.githubusercontent.com/GIFTEDLOV/uptimebond/ad0018207edfba936b4074d3f1ccb5a2df58ac3b/evidence/case-002-partial-refund';
   await page.evaluate((urls) => {
     const inputs = [...document.querySelectorAll('input[type=url]')];
     inputs.forEach((inp, i) => {
@@ -106,9 +110,15 @@ const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox']
       setter.call(inp, urls[i]);
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     });
-  }, [0,1,2,3].map((i) => `https://example.com/e${i}.json`));
+  }, [`${EV}/sla-terms.json`, `${EV}/monitor-report.json`,
+      `${EV}/provider-status.json`, `${EV}/maintenance-announcements.json`]);
   await new Promise((r) => setTimeout(r, 300));
-  check('step 3 (evidence) advances with valid https URLs', await nextBtn()); // -> Settlement
+
+  check('untested evidence does not advance', !(await nextBtn()));
+  await page.evaluate(() => [...document.querySelectorAll('button')]
+    .filter((b) => /^(Test|Re-test)$/.test(b.textContent.trim())).forEach((b) => b.click()));
+  await new Promise((r) => setTimeout(r, 6000));
+  check('step 3 (evidence) advances once all four test OK', await nextBtn()); // -> Settlement
   await new Promise((r) => setTimeout(r, 300));
   check('step 4 (settlement) advances with defaults', await nextBtn());       // -> Review
   await new Promise((r) => setTimeout(r, 300));

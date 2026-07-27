@@ -32,9 +32,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const GLM = 'file:///C:/Users/DELL/AppData/Roaming/npm/node_modules/genlayer/node_modules';
-const { default: keytar } = await import(`${GLM}/keytar/lib/keytar.js`);
-const gljs = await import(`${GLM}/genlayer-js/dist/index.js`);
+import { gljs, loadKeytar, CalldataAddress as ADDRESS_CLASS } from './sdk.mjs';
+
+const keytar = await loadKeytar();
 const { createClient, createAccount, chains, calldata } = gljs;
 
 const CHAIN = chains.testnetBradbury;
@@ -57,26 +57,12 @@ function hexToBytes(hex) {
   return b;
 }
 
-// CalldataAddress is what the SDK encodes as the address type. Newer
-// genlayer-js builds stopped re-exporting it from the package entrypoint and
-// from `calldata`, so fall back to the chunk that still exports it. Resolved
-// once at load: an address-typed constructor argument must encode as an
-// address, or the contract receives a plain string and the deployment is
-// silently wrong (this is exactly the class of bug ad00182 fixed).
-const ADDRESS_CLASS = await (async () => {
-  const direct = gljs.CalldataAddress ?? gljs.abi?.calldata?.CalldataAddress ?? calldata?.CalldataAddress;
-  if (direct) return direct;
-  const { readdirSync } = await import('node:fs');
-  const dir = new URL(`${GLM}/genlayer-js/dist/`);
-  for (const f of readdirSync(dir).filter((n) => n.endsWith('.js'))) {
-    const m = await import(new URL(f, dir).href).catch(() => null);
-    if (m?.CalldataAddress) return m.CalldataAddress;
-  }
-  return null;
-})();
-
+// CalldataAddress is what the SDK encodes as the address type, resolved once in
+// sdk.mjs from the same repository-local install the browser uses. An
+// address-typed constructor argument must encode as an address or the contract
+// receives a plain string and the deployment is silently wrong — the exact bug
+// that killed browser deploy 0x771ab100….
 function mkAddress(bytes) {
-  if (!ADDRESS_CLASS) throw new Error('CalldataAddress not found in genlayer-js');
   return new ADDRESS_CLASS(bytes);
 }
 

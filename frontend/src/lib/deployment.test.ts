@@ -20,12 +20,26 @@ import type { AgreementState, DeployReceipt } from '../chain';
 const receipt = vi.fn(async (): Promise<DeployReceipt | null> => null);
 const code = vi.fn(async (): Promise<string> => '');
 const state = vi.fn(async (): Promise<AgreementState> => ({} as AgreementState));
+const sources = vi.fn(async (): Promise<Record<string, string>> => ({}));
+const deadlockCfg = vi.fn(async () => ({
+  deadlock_refund_bps: 5000,
+  dispute_deadlock_seconds: 86400,
+  insufficient_evidence_deadlock_seconds: 86400,
+}));
+const balance = vi.fn(async (): Promise<bigint> => 0n);
 
 vi.mock('../chain', () => ({
   readDeployReceipt: () => receipt(),
   getContractCode: () => code(),
   readAgreement: () => state(),
+  readEvidenceSources: () => sources(),
+  readDeadlockConfig: () => deadlockCfg(),
+  getBalance: () => balance(),
 }));
+
+// Deterministic hashing, so the source check is exercised without pulling in
+// WebCrypto behaviour under jsdom.
+vi.mock('./hash', () => ({ sha256Hex: async () => 'a'.repeat(64) }));
 
 const { verifyDeployment } = await import('./deployment');
 
@@ -33,6 +47,7 @@ const SENDER = '0x456Ccff0d33463E1834F724C5C5971D6cff6f1dc';
 const PROVIDER = '0x79DD8260773C7D5DEA701dfC2D3dD804FF041bf2';
 const ADDR = '0xc09d70CE30BAd8ce8519C40Ef12C037B9cfBd99f';
 const HASH = '0x0c8e748c6268cd68c05adb583e060bbae0af35c19e97f48302c13c61dbd9648a';
+const BASE = 'https://raw.githubusercontent.com/GIFTEDLOV/uptimebond/ad00182/evidence/case-002-partial-refund';
 
 const okReceipt = (over: Partial<DeployReceipt> = {}): DeployReceipt => ({
   statusName: 'FINALIZED',
@@ -45,23 +60,53 @@ const okReceipt = (over: Partial<DeployReceipt> = {}): DeployReceipt => ({
 
 const okState = (over: Partial<AgreementState> = {}): AgreementState => ({
   customer: SENDER, provider: PROVIDER, status: 'AWAITING_FUNDING', resolution_mode: '',
-  escrow_atto: '0', incident_window: '', dispute_opened_at: 0, outcome: '', refund_bps: 0,
+  escrow_atto: '0', incident_window: '', dispute_opened_at: 0, outcome: '', refund_bps: 0 as number,
   maintenance_qualified: false, breached_clause_ids: [], ruling_reason: '',
   insufficient_evidence_ruled_at: 0, settlement_pending: false,
   settlement_proposer: '0x0000000000000000000000000000000000000000',
   settlement_refund_bps: 0, ...over,
 });
 
-const verify = () => verifyDeployment({ hash: HASH, sender: SENDER, provider: PROVIDER });
+const DRAFT = {
+  sender: SENDER,
+  provider: PROVIDER,
+  slaTermsUrl: `${BASE}/sla-terms.json`,
+  independentMonitorUrl: `${BASE}/monitor-report.json`,
+  providerStatusUrl: `${BASE}/provider-status.json`,
+  maintenanceAnnouncementsUrl: `${BASE}/maintenance-announcements.json`,
+  deadlockRefundBps: 5000,
+  disputeDeadlockSeconds: 86400,
+  insufficientEvidenceDeadlockSeconds: 86400,
+  escrowAtto: '10000000000000000',
+  sourceSha256: 'a'.repeat(64),
+  sdkVersion: '1.1.8',
+  buildVersion: 'test',
+};
+
+const verify = (over: Partial<typeof DRAFT> = {}) =>
+  verifyDeployment({ hash: HASH, draft: { ...DRAFT, ...over } });
 const checkFor = (v: Awaited<ReturnType<typeof verify>>, id: string) =>
   v.checks.find((c) => c.id === id);
 
 describe('deployment verification', () => {
   beforeEach(() => {
     receipt.mockReset(); code.mockReset(); state.mockReset();
+    sources.mockReset(); deadlockCfg.mockReset(); balance.mockReset();
     receipt.mockResolvedValue(okReceipt());
     code.mockResolvedValue('# contract source');
     state.mockResolvedValue(okState());
+    sources.mockResolvedValue({
+      sla_terms_url: DRAFT.slaTermsUrl,
+      independent_monitor_url: DRAFT.independentMonitorUrl,
+      provider_status_url: DRAFT.providerStatusUrl,
+      maintenance_announcements_url: DRAFT.maintenanceAnnouncementsUrl,
+    });
+    deadlockCfg.mockResolvedValue({
+      deadlock_refund_bps: 5000,
+      dispute_deadlock_seconds: 86400,
+      insufficient_evidence_deadlock_seconds: 86400,
+    });
+    balance.mockResolvedValue(0n);
   });
 
   it('accepts a genuinely deployed agreement', async () => {
@@ -153,6 +198,67 @@ describe('deployment verification', () => {
     expect(v.ok).toBe(false);
     expect(v.failed?.id).toBe('address');
     expect(v.claimedAddress).toBeNull();
+  });
+
+  it('rejects a contract whose evidence URLs are not the ones submitted', async () => {
+    // These are immutable and decide every future ruling. Verifying only the
+    // parties left them entirely unchecked.
+    sources.mockResolvedValue({
+      sla_terms_url: DRAFT.slaTermsUrl,
+      independent_monitor_url: 'https://evil.example/monitor.json',
+      provider_status_url: DRAFT.providerStatusUrl,
+      maintenance_announcements_url: DRAFT.maintenanceAnnouncementsUrl,
+    });
+    const v = await verify();
+    expect(v.ok).toBe(false);
+    expect(v.failed?.id).toBe('evidence');
+    expect(v.failed?.detail).toMatch(/independent monitor/i);
+  });
+
+  it('rejects a contract whose deadlock terms differ from the ones submitted', async () => {
+    deadlockCfg.mockResolvedValue({
+      deadlock_refund_bps: 2500,
+      dispute_deadlock_seconds: 86400,
+      insufficient_evidence_deadlock_seconds: 86400,
+    });
+    const v = await verify();
+    expect(v.ok).toBe(false);
+    expect(v.failed?.id).toBe('deadlock');
+  });
+
+  it('rejects a contract whose deployed source is not the source we sent', async () => {
+    const v = await verify({ sourceSha256: 'b'.repeat(64) });
+    expect(v.ok).toBe(false);
+    expect(v.failed?.id).toBe('source');
+    expect(state).not.toHaveBeenCalled();
+  });
+
+  it('rejects an agreement that already holds escrow before funding', async () => {
+    state.mockResolvedValue(okState({ escrow_atto: '10000000000000000' }));
+    const v = await verify();
+    expect(v.ok).toBe(false);
+    expect(v.failed?.id).toBe('escrow');
+  });
+
+  it('rejects a contract whose balance is non-zero before funding', async () => {
+    balance.mockResolvedValue(1n);
+    const v = await verify();
+    expect(v.ok).toBe(false);
+    expect(v.failed?.id).toBe('balance');
+  });
+
+  it('verifies every constructor field on the happy path', async () => {
+    const v = await verify();
+    expect(v.ok).toBe(true);
+    // Each of the thirteen checks must have actually run.
+    const ids = v.checks.filter((c) => c.ok === true).map((c) => c.id);
+    expect(ids).toEqual([
+      'finalized', 'execution', 'address', 'code', 'source', 'state',
+      'customer', 'provider', 'evidence', 'deadlock', 'status', 'escrow', 'balance',
+    ]);
+    expect(sources).toHaveBeenCalled();
+    expect(deadlockCfg).toHaveBeenCalled();
+    expect(balance).toHaveBeenCalled();
   });
 
   it('never returns an address unless every check passed', async () => {

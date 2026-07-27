@@ -19,9 +19,12 @@ const methods = (st: AgreementState, role: 'customer' | 'provider' | 'observer',
   availableActions({ st, role, deadlock: dl }).map((a) => a.method);
 
 describe('action availability', () => {
-  it('AWAITING_FUNDING: customer funds or cancels; provider sees nothing', () => {
+  it('AWAITING_FUNDING: customer funds; provider sees nothing', () => {
+    // Cancel is deliberately absent — the contract only permits it at
+    // AWAITING_PROVIDER_ACCEPTANCE. Fund requires a known positive amount.
     const st = state({ status: 'AWAITING_FUNDING' });
-    expect(methods(st, 'customer')).toEqual(['fund', 'cancel_before_acceptance']);
+    expect(availableActions({ st, role: 'customer', deadlock: null, fundAtto: 100n })
+      .map((a) => a.method)).toEqual(['fund']);
     expect(methods(st, 'provider')).toEqual([]);
   });
   it('AWAITING_PROVIDER_ACCEPTANCE: only provider accepts; customer can cancel', () => {
@@ -88,5 +91,51 @@ describe('action availability', () => {
   it('never offers a payable action to an observer', () => {
     const st = state({ status: 'AWAITING_FUNDING' });
     expect(methods(st, 'observer')).toEqual([]);
+  });
+});
+
+describe('actions the contract would reject are never offered', () => {
+  it('cancel_before_acceptance is absent before funding', () => {
+    // contracts/uptime_bond.py: cancel requires AWAITING_PROVIDER_ACCEPTANCE.
+    // Offering it at AWAITING_FUNDING surfaced a button that reverts ~30
+    // minutes after the signature, for a fee, having changed nothing.
+    const st = state({ status: 'AWAITING_FUNDING' });
+    expect(methods(st, 'customer')).not.toContain('cancel_before_acceptance');
+    // It appears only in the state the contract actually permits.
+    expect(methods(state({ status: 'AWAITING_PROVIDER_ACCEPTANCE' }), 'customer'))
+      .toContain('cancel_before_acceptance');
+  });
+
+  it('fund is withheld unless a positive amount is known', () => {
+    const st = state({ status: 'AWAITING_FUNDING' });
+    const withNone = availableActions({ st, role: 'customer', deadlock: null });
+    expect(withNone.map((a) => a.method)).not.toContain('fund');
+
+    const withZero = availableActions({ st, role: 'customer', deadlock: null, fundAtto: 0n });
+    expect(withZero.map((a) => a.method)).not.toContain('fund');
+
+    const withAmount = availableActions({
+      st, role: 'customer', deadlock: null, fundAtto: 10_000_000_000_000_000n,
+    });
+    const fund = withAmount.find((a) => a.method === 'fund');
+    expect(fund).toBeTruthy();
+    expect(fund?.valueWei).toBe(10_000_000_000_000_000n);
+  });
+
+  it('a payable action never carries an undefined value', () => {
+    // An undefined valueWei is sent as 0n by the write path, which either
+    // reverts or funds nothing while appearing to succeed.
+    for (const status of ['AWAITING_FUNDING', 'AWAITING_PROVIDER_ACCEPTANCE', 'ACTIVE', 'RULED']) {
+      for (const role of ['customer', 'provider'] as const) {
+        const acts = availableActions({
+          st: state({ status, outcome: status === 'RULED' ? 'PARTIAL_REFUND' : '' }),
+          role, deadlock: null, fundAtto: undefined,
+        });
+        for (const a of acts) {
+          if ('valueWei' in a && a.valueWei !== undefined) expect(a.valueWei > 0n).toBe(true);
+          if (a.method === 'fund') throw new Error('fund offered without an amount');
+        }
+      }
+    }
   });
 });

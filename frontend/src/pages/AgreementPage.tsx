@@ -16,8 +16,13 @@ export function AgreementPage() {
   useEffect(() => { setSaved(!!getAgreement(contractAddress)); }, [contractAddress]);
 
   // Escrow to fund, if this agreement is one we created and remembered.
+  // Read from its own field: it used to be smuggled through `notes`, so a note
+  // that happened to be digits was funded as an amount and writing an amount
+  // destroyed the note.
   const entry = getAgreement(contractAddress);
-  const fundAtto = entry?.notes && /^\d+$/.test(entry.notes) ? BigInt(entry.notes) : undefined;
+  const fundAtto = entry?.escrowAtto && /^\d+$/.test(entry.escrowAtto)
+    ? BigInt(entry.escrowAtto)
+    : undefined;
 
   if (!valid) {
     return (

@@ -11,9 +11,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 
-const GLM = 'file:///C:/Users/DELL/AppData/Roaming/npm/node_modules/genlayer/node_modules';
-const { default: keytar } = await import(`${GLM}/keytar/lib/keytar.js`);
-export const gljs = await import(`${GLM}/genlayer-js/dist/index.js`);
+// One SDK for scripts and browser alike — see sdk.mjs.
+import { gljs as sdk, CalldataAddress as SdkCalldataAddress, loadKeytar, SDK_VERSION } from './sdk.mjs';
+
+const keytar = await loadKeytar();
+export const gljs = sdk;
+export { SDK_VERSION };
 const { createClient, createAccount, chains, calldata } = gljs;
 
 export const CHAIN = chains.testnetBradbury;
@@ -40,27 +43,12 @@ function hexToBytes(hex) {
 }
 
 /**
- * genlayer-js does not re-export CalldataAddress from its package entry, but
- * calldata.encode() dispatches on `instanceof CalldataAddress`, so a plain
- * object will silently encode as a dict and the contract will receive
- * something that is not an Address. Resolve the real class from whichever
- * internal chunk exports it — discovered by scanning rather than hardcoded,
- * since the chunk filenames carry build hashes.
+ * The calldata Address class, resolved once in sdk.mjs from the same
+ * repository-local install the browser bundle uses. `calldata.encode()`
+ * dispatches on `instanceof`, so this must be the identical class object —
+ * CI asserts exactly that.
  */
-const CalldataAddress = await (async () => {
-  const direct = gljs.CalldataAddress ?? calldata?.CalldataAddress;
-  if (typeof direct === 'function') return direct;
-  const distDir = `${GLM}/genlayer-js/dist/`;
-  for (const f of readdirSync(fileURLToPath(distDir)).filter(n => n.endsWith('.js'))) {
-    try {
-      const m = await import(`${distDir}${f}`);
-      if (typeof m.CalldataAddress === 'function') return m.CalldataAddress;
-    } catch { /* not a loadable chunk; keep scanning */ }
-  }
-  throw new Error('CalldataAddress could not be resolved from genlayer-js. ' +
-    'Address arguments would encode as a dict instead of an address, so ' +
-    'refusing to continue rather than deploying a broken contract.');
-})();
+export const CalldataAddress = SdkCalldataAddress;
 
 export function mkAddress(bytes) {
   return new CalldataAddress(bytes);
