@@ -10,6 +10,7 @@
  */
 
 import { createClient, chains } from 'genlayer-js';
+import { CalldataAddress } from 'genlayer-js/types';
 import { CHAIN_ID } from './config';
 
 export type TxPhase =
@@ -223,6 +224,35 @@ export interface DeployArgs {
   insufficient_evidence_deadlock_seconds: number;
 }
 
+/**
+ * Encode a hex address as GenVM calldata's Address type.
+ *
+ * `calldata.encode()` dispatches on `instanceof CalldataAddress`. A plain
+ * `"0x…"` string is therefore encoded as a 42-character `str`, and GenVM hands
+ * that str to a constructor annotated `provider: Address`. The type comparisons
+ * in `__init__` silently return False (a str never equals an Address), and the
+ * assignment into the Address-typed storage slot then raises a bare TypeError —
+ * no `gl.vm.UserError`, so the transaction reaches consensus and fails
+ * execution with an empty error message.
+ *
+ * That is exactly how deploy `0x771ab100…` died: all eight arguments were
+ * present and correct, but `provider` was on the wire as `str(42)` instead of
+ * `Address(20 bytes)`. `deploy/scripts/lib.mjs` encodes the same argument
+ * through `mkAddress()`, which is why the scripted deployments succeeded and
+ * the browser's did not.
+ */
+export function addressArg(hex: string): CalldataAddress {
+  const clean = hex.trim().replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]{40}$/.test(clean)) {
+    throw new Error(`Not a 20-byte address: ${JSON.stringify(hex)}`);
+  }
+  const bytes = new Uint8Array(20);
+  for (let i = 0; i < 20; i += 1) {
+    bytes[i] = Number.parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  }
+  return new CalldataAddress(bytes);
+}
+
 /** Deploys UptimeBond from the connected customer wallet.
  *
  * Returns only the transaction hash. Deployment is NOT complete until the
@@ -236,8 +266,9 @@ export async function deployContract(
   return (await c.deployContract({
     code,
     // Constructor is positional; order mirrors contracts/uptime_bond.py.
+    // `provider` is declared `Address` and MUST be encoded as one — see addressArg.
     args: [
-      args.provider,
+      addressArg(args.provider),
       args.sla_terms_url,
       args.independent_monitor_url,
       args.provider_status_url,

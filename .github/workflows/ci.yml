@@ -61,6 +61,9 @@ jobs:
       - name: Run e2e (no GEN spent)
         run: npm run e2e
 
+      - name: Deploy calldata encoding (no GEN spent)
+        run: npm run e2e:encoding
+
       - name: Accessibility scan (axe-core, WCAG 2.1 AA)
         run: npm run a11y
 
@@ -72,11 +75,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scan for private keys, mnemonics, and secrets
+      - name: Scan for key material and recovery phrases
         run: |
           set -e
           # 64-hex values that are NOT known transaction hashes / commit refs are suspicious.
-          PATTERN='private[_-]?key|mnemonic|seed[_-]?phrase|BEGIN [A-Z ]*PRIVATE KEY|xprv[0-9a-zA-Z]{20,}'
+          #
+          # Each alternative is written so it cannot match this file. Spelling
+          # the recovery-phrase term out in full made the scanner match its own
+          # definition, so the job failed on every commit and a real secret
+          # would have been indistinguishable from that self-match. The bracket
+          # keeps the regex meaning identical while breaking the literal.
+          PATTERN='private[_-]?key|mnemon[i]c|seed[_-]?phrase|BEGIN [A-Z ]*PRIVATE KEY|xprv[0-9a-zA-Z]{20,}'
           if grep -rInE "$PATTERN" \
                 --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs' \
                 --include='*.json' --include='*.py' --include='*.yml' --include='*.yaml' \
