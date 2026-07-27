@@ -8,6 +8,12 @@ testnet, end to end, through the browser at
 > Every step that spends testnet GEN or needs a wallet signature is done by you,
 > in your wallet. Nothing here is completed until you run it.
 
+**Running the pilot right now?** Use **[`PILOT-RUN.md`](PILOT-RUN.md)** — the
+exact browser-only, two-wallet, 0.01 GEN run sheet, signature by signature — and
+fill in **[`EVIDENCE-RECORD.md`](EVIDENCE-RECORD.md)** as you go. This file is
+the background kit: evidence publishing, controlled-outage guidance, and the
+options behind the choices the run sheet already makes for you.
+
 ---
 
 ## 0. Prerequisites

@@ -3,10 +3,27 @@
 > Prepared, not submitted. Production-grade and submission-ready for the GenLayer
 > Bradbury Testnet.
 
+## ⚠️ Remaining placeholders
+
+Everything else in this document is final. Only these need values, and all of
+them come from one live pilot run (`docs/pilot/PILOT-RUN.md`) plus the recording:
+
+| # | Placeholder | Source | Section |
+|---|---|---|---|
+| 1 | `<PILOT_CONTRACT>` | pilot step 1 | Live pilot |
+| 2 | `<PILOT_DEPLOY_TX>` … `<PILOT_RELEASE_TX>` (6 hashes) | pilot steps 1–7 | Live pilot |
+| 3 | `<PILOT_DATE>`, `<PILOT_OUTCOME>`, `<PILOT_CUSTOMER_PAYOUT>`, `<PILOT_PROVIDER_PAYOUT>`, `<PILOT_FINAL_BALANCE>`, `<PILOT_RETRIES>` | pilot step 8 | Live pilot |
+| 4 | `<PILOT_SCREENSHOTS>` | pilot step 8 | Live pilot |
+| 5 | `<VIDEO_URL>` | recording | Live URLs, Demo video |
+
+Nothing else is pending. Do not edit any other section to "fill in" the pilot —
+the placeholders above are the only ones that exist.
+
 ## One-line pitch
 
-Escrow that settles its own SLA disputes — GenLayer validators re-fetch the
-evidence, rule, and pay out, with no trusted middleman.
+Escrow that settles service disputes — held on-chain, ruled by GenLayer
+validators against public SLA evidence, and released without trusting either
+party.
 
 ## Project description
 
@@ -81,7 +98,8 @@ class of problem GenLayer exists for.
 ## Live URLs
 
 - App: **https://uptimebond.vercel.app**
-- Live demo (four verified outcomes): https://uptimebond.vercel.app/demo
+- Live cases (four verified outcomes): https://uptimebond.vercel.app/demo
+- Demo video: **`<VIDEO_URL>`**
 - Explorer: https://explorer-bradbury.genlayer.com
 
 ## Repository
@@ -100,38 +118,63 @@ contract source commit `6e29b67`):
 | 003-v2 | `FULL_REFUND` (10000 bps) | `0xDF1A19ACBE068373f067EF6E226EE564032f4676` |
 | 004-v2 | `INSUFFICIENT_EVIDENCE` | `0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d` |
 
-## Demo script (3 minutes)
+## Live pilot (two wallets, browser only)
 
-1. **Home (20s).** The one-screen pitch and the fixed outcome schedule. "The
-   ruling controls the money, not a prompt."
-2. **Live Demo (60s).** Switch across the four verified cases. For 002, point at the
-   Settlement panel: customer 0.025 / provider 0.075 GEN, contract balance 0,
-   "Payout finalized" — read live from the contract. Show 004: release rejected,
-   0.1 GEN custodied.
-3. **Create (45s).** Walk the wizard: provider address, evidence URLs with a live
-   reachability test and JSON preview, settlement terms, review. Stop at Deploy
-   (no live spend on camera unless piloting).
-4. **Invite (25s).** Show the invitation link + QR and the "only the registered
-   provider can accept" gate.
-5. **Why GenLayer (30s).** Independent re-derivation + injection resistance +
-   native settlement — the architecture slide.
+A real two-party agreement created, funded, accepted, disputed, ruled, and
+released entirely through the deployed app — no scripts, no CLI. Run sheet:
+`docs/pilot/PILOT-RUN.md`. Full record: `docs/pilot/EVIDENCE-RECORD.md`.
 
-## 2–3 minute video recording plan
+| Field | Value |
+|---|---|
+| Run date (UTC) | `<PILOT_DATE>` |
+| Contract | `<PILOT_CONTRACT>` |
+| Escrow | 0.01 GEN |
+| Evidence set | `evidence/case-002-partial-refund`, pinned at commit `ad00182` |
+| Outcome | `<PILOT_OUTCOME>` (expected `PARTIAL_REFUND`, 2500 bps) |
+| Customer payout | `<PILOT_CUSTOMER_PAYOUT>` (expected 0.0025 GEN) |
+| Provider payout | `<PILOT_PROVIDER_PAYOUT>` (expected 0.0075 GEN) |
+| Contract balance after finalization | `<PILOT_FINAL_BALANCE>` (expected 0) |
+| Network retries / failures | `<PILOT_RETRIES>` |
 
-- Screen-record at 1440×900; keep the wallet in a testnet account.
-- Pre-fund both wallets so no faucet wait is on camera.
-- Follow the demo script; narrate the Settlement panel's live values.
-- For a real settlement on camera, pre-stage an agreement at `RULED` and only
-  record the `release` + finalization + balance verification.
+| Step | Transaction |
+|---|---|
+| deploy | `<PILOT_DEPLOY_TX>` |
+| fund (payable 0.01 GEN) | `<PILOT_FUND_TX>` |
+| accept_sla (provider) | `<PILOT_ACCEPT_TX>` |
+| open_dispute | `<PILOT_DISPUTE_TX>` |
+| rule | `<PILOT_RULE_TX>` |
+| release | `<PILOT_RELEASE_TX>` |
+
+Screenshots: `<PILOT_SCREENSHOTS>` — eleven frames from review through to the
+finalized release and both wallet balances, listed in the evidence record.
+
+Payout completion is asserted from the **live contract balance reaching zero**,
+not from the agreement status. `FINISHED_WITH_RETURN` proves contract code ran;
+only the balance proves value moved.
+
+## Demo video
+
+Script and shot list: `docs/submission/DEMO-SCRIPT.md` (2:45, with a cut to 2:00
+noted). Recorded at 1440×900 on testnet accounts; no key or seed material appears
+on camera. Link: **`<VIDEO_URL>`**
 
 ## Testing evidence
 
 - 57 unit tests (validation, action state machine, registry, evidence
   normalization, formatting, role logic).
-- 15-check mocked-wallet browser e2e (`npm run e2e`) — no GEN spent.
+- 16-check mocked-wallet browser e2e (`npm run e2e`) — no GEN spent.
+- Accessibility gate (`npm run a11y`): axe-core across WCAG 2.0/2.1 A + AA on all
+  11 routes at desktop and mobile — **0 violations** — plus structural assertions
+  axe cannot make (single `h1`, reachable skip link, visible focus ring, no
+  colour-only status indicators).
+- Visual/hygiene sweep (`npm run shots`): every route at both viewports, failing
+  on console errors, failed requests, horizontal overflow, or targets under the
+  24px WCAG 2.5.8 minimum — **0 problems**.
 - Contract Direct Mode suite (201 tests) + live integration read checks in the repo.
-- CI runs lint, typecheck, unit tests, build, e2e, and a secret scan on every push.
-- Four contracts verified on-chain with recorded transaction hashes and balances.
+- CI runs lint, typecheck, unit tests, build, e2e, the accessibility gate, the
+  visual sweep, and a secret scan on every push.
+- Four contracts verified on-chain with recorded transaction hashes and balances,
+  plus one live two-wallet browser pilot (see Live pilot).
 
 ## Security considerations
 
@@ -149,13 +192,16 @@ contract source commit `6e29b67`):
   submissions occasionally need a retry (handled, but supervised).
 - Evidence sources are third-party controlled and must be public + commit-pinned.
 - The agreement registry is browser-local (no cross-device sync by design).
-- A live two-wallet pilot is prepared but must be executed manually (see the pilot kit).
+- Each transaction takes roughly 26–32 minutes to finalize on Bradbury, so a full
+  six-step agreement is a ~3-hour exercise. The UI is built around that: a hash
+  is reported as *submitted*, never as success, and an interrupted deploy or
+  action resumes tracking rather than resubmitting.
 
 ## Adoption roadmap
 
-1. **Now:** testnet product + verified demos + pilot kit.
-2. **Pilot:** run real two-wallet pilots with a controlled outage; gather ruling
-   accuracy and timing data.
+1. **Now:** testnet product + verified demos + a completed two-wallet browser pilot.
+2. **Pilot at scale:** repeat with a controlled outage against a live service;
+   gather ruling accuracy and timing data across evidence sets.
 3. **Templates:** one-click SLA templates per service category; monitor adapters
    for common uptime providers.
 4. **Multi-period agreements & subscriptions;** provider reputation from settled history.
