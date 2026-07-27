@@ -61,6 +61,12 @@ jobs:
       - name: Run e2e (no GEN spent)
         run: npm run e2e
 
+      - name: Accessibility scan (axe-core, WCAG 2.1 AA)
+        run: npm run a11y
+
+      - name: Visual sweep — console errors, failed requests, overflow, target size
+        run: npm run shots
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-latest

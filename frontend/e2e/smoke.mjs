@@ -60,7 +60,9 @@ const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox']
   const page = await newPage(browser, null);
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle2' });
   const h = await page.$eval('.hero-title', (e) => e.textContent).catch(() => '');
-  check('landing shows hero headline', /SLA disputes/i.test(h));
+  check('landing shows hero headline', /keep their word/i.test(h));
+  const sub = await page.$eval('.hero-sub', (e) => e.textContent).catch(() => '');
+  check('landing states the proposition', /escrow/i.test(sub) && /validators/i.test(sub));
   check('landing lists all nav routes', (await page.$$('.mainnav .navlink')).length >= 5);
   check('landing has no console errors', page.__errors.length === 0);
   await page.close();
