@@ -179,16 +179,13 @@ to sign from the wrong address.
 
 ## Step 5 — Open the dispute
 
-> ⚠️ **Read the blocker note at the bottom of this file before this step.**
-> The browser UI currently submits `open_dispute` without the incident-window
-> argument the contract requires. Confirm the fix is deployed before you get
-> here, otherwise this step will revert and burn ~30 minutes.
-
 Either party may do this; the run sheet uses CUSTOMER so the provider only ever
 signs once.
 
 1. On `/agreement/<address>`, Actions card → **Open dispute**.
-2. Enter the incident window when prompted, e.g.
+2. The confirmation dialog asks for an **Incident window**. It is required — the
+   contract rejects a blank one — and confirmation stays disabled until you
+   enter it. Use something you will recognise later, e.g.
    `Pilot — May 2026 uptime and maintenance-notice dispute`.
 
    **SIGN 4 — open_dispute.** Approve.
@@ -283,7 +280,10 @@ two retries and reported them is worth more than one that claims a clean run.
 
 ---
 
-## ⚠️ Known blocker — `open_dispute` from the browser
+## Fixed before this run sheet was published — `open_dispute`
+
+Recorded because it is exactly the class of failure this pilot exists to catch,
+and because the fix is what makes step 5 executable.
 
 `contracts/uptime_bond.py` declares `open_dispute(self, incident_window: str)`
 and rejects an empty window:
@@ -293,23 +293,17 @@ if not incident_window:
     raise gl.vm.UserError(f"{ERROR_INPUT} Incident window is required")
 ```
 
-`lib/actions.ts` passes that argument only when `AgreementView` receives an
-`incidentWindow` prop:
+`lib/actions.ts` passed that argument only when `AgreementView` received an
+`incidentWindow` prop — and no caller supplied one, so the browser submitted
+`open_dispute` with **zero arguments** against a method requiring one. Because
+the revert surfaces at consensus, the failure would have landed ~30 minutes
+after the signature.
 
-```ts
-args: ctx.incidentWindow ? [ctx.incidentWindow] : undefined,
-```
+The four published demo cases were disputed through
+`deploy/scripts/lifecycle.mjs`, which reads `incident_window` from `cases.json`,
+so the UI path had never been exercised.
 
-No caller supplies it. `AgreementPage` renders
-`<AgreementView address={contractAddress} fundAtto={fundAtto} />` and `Demo`
-renders `<AgreementView address={cfg.address} />`. So the browser submits
-`open_dispute` with **zero arguments** against a method that requires one.
-
-The four published demo cases were disputed through `deploy/scripts/lifecycle.mjs`,
-which reads `incident_window` from `cases.json` — so this path was never
-exercised from the UI.
-
-**Step 5 of this run sheet cannot succeed until this is fixed.** The fix is one
-input in the existing confirmation dialog, mirroring the refund-percentage
-slider already there for `propose_mutual_settlement`. It is not a new feature;
-it is the missing argument for an action the UI already offers.
+Fixed in `68a2aa9`: the confirmation dialog now collects the window, keeps
+confirmation disabled until it is non-blank, and trims it before submission.
+Covered by `src/components/AgreementView.test.tsx` and a unit test pinning the
+argument contract in `availableActions`.
