@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AGREEMENTS } from '../config';
 import { AgreementView } from '../components/AgreementView';
 
@@ -16,16 +17,17 @@ export function Demo() {
   const [id, setId] = useState(LIVE[0].id);
   const [showArchived, setShowArchived] = useState(false);
   const cfg = useMemo(() => AGREEMENTS.find((a) => a.id === id)!, [id]);
-  useEffect(() => { document.title = 'Live Demo — UptimeBond'; }, []);
+  useEffect(() => { document.title = 'Live cases — UptimeBond'; }, []);
 
   return (
     <>
       <div className="page-head">
-        <h2>Live demo</h2>
+        <p className="eyebrow">On the record</p>
+        <h2>Live cases</h2>
         <p className="muted">
-          Four agreements, each deployed on Bradbury and driven to settlement. Every value below is
-          read live from the contract. These are the verified proof cases — the real workflow lives
-          under <a href="/create">Create Agreement</a>.
+          Four agreements, each deployed on Bradbury and driven to settlement — one per outcome.
+          Every value below is read live from the contract. These are the verified proof cases;
+          the real workflow lives under <Link to="/create">Create Agreement</Link>.
         </p>
       </div>
 

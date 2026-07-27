@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CHAIN_ID, CHAIN_NAME, EXPLORER, REPO } from '../config';
+import { EmptyMark } from '../components/editorial/Editorial';
 
 function useTitle(t: string) {
   useEffect(() => { document.title = t; }, [t]);
@@ -138,10 +139,10 @@ export function NotFound() {
   useTitle('Not found — UptimeBond');
   return (
     <div className="empty-state">
-      <div className="empty-emoji" aria-hidden="true">🔍</div>
+      <EmptyMark />
       <h2>Page not found</h2>
       <p className="muted">That route doesn&apos;t exist. It may have been a stale link.</p>
-      <Link to="/" className="btn-primary">Back to dashboard</Link>
+      <Link to="/" className="btn-primary">Back to the homepage</Link>
     </div>
   );
 }

@@ -40,7 +40,9 @@ export function Diagnostics() {
             <dt>Network</dt><dd>{CHAIN_NAME} <span className="mono">(chain {CHAIN_ID})</span></dd>
             <dt>Wallet</dt><dd>{wallet.hasWallet ? (wallet.account ? 'connected' : 'available') : 'none detected'}</dd>
             <dt>Wallet chain</dt><dd>{wallet.chainId ?? '—'}{wallet.wrongChain ? ' (wrong network)' : ''}</dd>
-            <dt>JSON-RPC</dt><dd role="status">{dot(rpc)} {rpc}</dd>
+            {/* The live region lives on a span, not the <dd>: a role on the
+                <dd> stops it counting as part of the definition list. */}
+            <dt>JSON-RPC</dt><dd><span role="status">{dot(rpc)} {rpc}</span></dd>
           </dl>
         </div>
         <div className="card">

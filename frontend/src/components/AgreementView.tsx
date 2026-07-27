@@ -146,25 +146,30 @@ export function AgreementView({
           : <div className="card"><h2>Evidence</h2><div className="skeleton-lines"><span /><span /></div></div>}
       </div>
 
-      <div className="grid">
-        <Deadlock dl={deadlock} />
-        <div className="card">
-          <h2>Appeals &amp; finality</h2>
-          <p>
-            There is no custom AI re-ruling method. Parties use GenLayer&apos;s native transaction
-            appeal to re-adjudicate the <code>rule</code> transaction.
-          </p>
-          <p>
-            Every payout is an EVM external message that executes at finalization by protocol
-            behavior (there is no <code>on</code> parameter), so funds never move before the
-            accepted decision is final. A ruling that is accepted but not yet finalized can still
-            be overturned.
-          </p>
-          <p className="muted small">
-            <a href={`${EXPLORER}/address/${address}`} target="_blank" rel="noreferrer">View contract on the explorer ↗</a>
-          </p>
+      {/* Chain mechanics stay available but visually secondary: the settlement,
+          the parties and the actions above are what a party acts on. */}
+      <details className="tech-detail">
+        <summary>Technical detail — deadlock fallback, appeals and finality</summary>
+        <div className="grid">
+          <Deadlock dl={deadlock} />
+          <div className="card">
+            <h2>Appeals &amp; finality</h2>
+            <p>
+              There is no custom AI re-ruling method. Parties use GenLayer&apos;s native transaction
+              appeal to re-adjudicate the <code>rule</code> transaction.
+            </p>
+            <p>
+              Every payout is an EVM external message that executes at finalization by protocol
+              behavior (there is no <code>on</code> parameter), so funds never move before the
+              accepted decision is final. A ruling that is accepted but not yet finalized can still
+              be overturned.
+            </p>
+            <p className="muted small">
+              <a href={`${EXPLORER}/address/${address}`} target="_blank" rel="noreferrer">View contract on the explorer ↗</a>
+            </p>
+          </div>
         </div>
-      </div>
+      </details>
 
       <ConfirmDialog
         open={!!pending}

@@ -142,10 +142,14 @@ export function Create() {
   };
 
   return (
-    <>
+    <div className="page-narrow">
       <div className="page-head">
+        <p className="eyebrow">A guided agreement</p>
         <h2>Create an agreement</h2>
-        <p className="muted">Deploy a fresh UptimeBond escrow from your wallet. Testnet GEN only.</p>
+        <p className="muted">
+          Six steps: the parties, the service, the evidence that will decide any dispute, the
+          settlement terms, a review, and the deployment itself. Testnet GEN only.
+        </p>
       </div>
 
       <ol className="wizard-steps" aria-label="Progress">
@@ -300,6 +304,11 @@ export function Create() {
         {step === 5 && (
           <>
             <h3>Review</h3>
+            <p className="muted">
+              This is the whole agreement. The provider address and the four evidence sources
+              are pinned at deployment and can never be edited afterwards — read them once more
+              before you sign.
+            </p>
             <dl className="kv review">
               <dt>Customer</dt><dd className="mono">{wallet.account && shortAddr(wallet.account)}</dd>
               <dt>Provider</dt><dd className="mono">{shortAddr(f.provider)} {f.providerLabel && `· ${f.providerLabel}`}</dd>
@@ -315,8 +324,10 @@ export function Create() {
               </ul>
             </div>
             <div className="notice warn">
-              <strong>Testnet, and irreversible.</strong> Evidence URLs and terms are fixed at deployment.
-              Gas is paid in testnet GEN. Verify everything above before signing.
+              <strong>Immutable evidence, and irreversible terms.</strong> Once deployed, the four
+              evidence URLs above are the only sources any validator will ever read for this
+              agreement, and neither party can change them, swap them, or add to them. The
+              settlement terms are fixed the same way. Gas is paid in testnet GEN.
             </div>
             <label className="checkbox">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
@@ -371,6 +382,6 @@ export function Create() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

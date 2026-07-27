@@ -4,6 +4,7 @@ import { EXPLORER } from '../config';
 import { isAddress } from '../lib/validation';
 import { getAgreement, upsertAgreement } from '../lib/registry';
 import { AgreementView } from '../components/AgreementView';
+import { EmptyMark } from '../components/editorial/Editorial';
 
 export function AgreementPage() {
   const { contractAddress = '' } = useParams();
@@ -20,7 +21,7 @@ export function AgreementPage() {
   if (!valid) {
     return (
       <div className="empty-state">
-        <div className="empty-emoji" aria-hidden="true">⚠️</div>
+        <EmptyMark />
         <h2>Invalid contract address</h2>
         <p className="muted">This route needs a valid 0x address.</p>
         <Link to="/agreements" className="btn-primary">My agreements</Link>

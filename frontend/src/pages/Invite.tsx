@@ -9,6 +9,7 @@ import { useWallet } from '../state/wallet';
 import { useLiveAgreement, roleFor } from '../state/hooks';
 import { AgreementView } from '../components/AgreementView';
 import { EvidenceSources, StatusChip } from '../components/Panels';
+import { EmptyMark } from '../components/editorial/Editorial';
 import { readEvidenceSources } from '../chain';
 
 /** Provider onboarding. Loads the live agreement with no wallet, shows the
@@ -48,7 +49,7 @@ export function Invite() {
   if (!valid) {
     return (
       <div className="empty-state">
-        <div className="empty-emoji" aria-hidden="true">⚠️</div>
+        <EmptyMark />
         <h2>Invalid invitation</h2>
         <p className="muted">This invitation link needs a valid contract address.</p>
         <Link to="/" className="btn-primary">Home</Link>

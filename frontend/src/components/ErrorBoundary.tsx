@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { logError } from '../lib/health';
+import { EmptyMark } from './editorial/Editorial';
 
 /** App-wide error boundary. Renders a recoverable fallback instead of a blank
  *  screen, and records a structured client error (no wallet data). */
@@ -17,7 +18,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
       return (
         <div className="app">
           <div className="empty-state">
-            <div className="empty-emoji" aria-hidden="true">💥</div>
+            <EmptyMark />
             <h2>Something went wrong</h2>
             <p className="muted">The interface hit an unexpected error. Your funds and on-chain state are unaffected.</p>
             <div className="hero-cta">

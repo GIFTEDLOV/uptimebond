@@ -8,6 +8,7 @@ import {
 import { useWallet } from '../state/wallet';
 import { roleFor } from '../state/hooks';
 import { StatusChip } from '../components/Panels';
+import { EmptyMark } from '../components/editorial/Editorial';
 
 export function Agreements() {
   const wallet = useWallet();
@@ -67,7 +68,7 @@ export function Agreements() {
         </p>
       </div>
 
-      <div className="card">
+      <div className="card import-card">
         <h2>Import an agreement</h2>
         <div className="import-row">
           <input
@@ -105,7 +106,7 @@ export function Agreements() {
 
       {entries.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-emoji" aria-hidden="true">📄</div>
+          <EmptyMark />
           <h3>No agreements yet</h3>
           <p className="muted">Create one, import an address, or open an invitation link.</p>
           <Link to="/create" className="btn-primary">Create an agreement</Link>
