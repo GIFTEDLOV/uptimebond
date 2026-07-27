@@ -8,6 +8,22 @@ and no off-chain coordinator.
 
 Live on GenLayer Bradbury Testnet. Contract source: [`contracts/uptime_bond.py`](contracts/uptime_bond.py).
 
+> **Status — frozen at `v1.0.0-bradbury` (`11c39f9`).**
+> The contract, the frontend and the tooling are production-grade for Bradbury,
+> and the **four v2 agreements below remain deployed, settled and verified
+> on-chain**.
+>
+> **Fresh self-service deployment is currently blocked.** A deployment on
+> 27 July 2026 finalized with `FINISHED_WITH_RETURN`, 5/5 validators agreeing
+> and storage writes recorded, yet no contract exists at the address its receipt
+> named. Every byte the client controls was compared against a deployment that
+> worked and they are equivalent, so this looks node-side. **No funds were at
+> risk — deployment moves no value and nothing was escrowed.** Details:
+> [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
+>
+> A fresh end-to-end two-wallet pilot is therefore **prepared but not
+> completed**. Further deployments are frozen pending a GenLayer answer.
+
 ---
 
 ## The problem
@@ -434,10 +450,35 @@ Stated plainly rather than glossed:
   customer account; running them concurrently lets a later submission land while
   an earlier one is unfinalized and get reverted. True parallel execution would
   need a separate signer per case. The harness README documents this.
-- **SDK drift is an unpinned hazard.** Two breakages surfaced this session from
+- **Fresh deployment is blocked by a Bradbury state-materialization
+  inconsistency.** On 27 July 2026 a deployment finalized `FINISHED_WITH_RETURN`
+  with 5/5 AGREE and recorded storage changes containing the correct constructor
+  state — and `gen_getContractCode`, `gen_call get_state` (at both
+  `latest-final` and `latest-nonfinal`) and the explorer contracts endpoint all
+  report nothing at the address the receipt names. The transaction envelope is
+  byte-for-byte equivalent to a scripted deployment that worked, on the same
+  pinned SDK. The one substantive difference is a non-zero `storage_proof` where
+  the working control has zero. **No funds were escrowed** — deployment
+  transfers no value, and the escrow is a separate later call that was never
+  made. Frozen pending a GenLayer answer; see
+  [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
+- **The live two-wallet pilot is prepared but not complete.** The run sheet and
+  evidence template are ready
+  ([`docs/pilot/PILOT-RUN.md`](docs/pilot/PILOT-RUN.md)); it cannot be executed
+  while fresh deployment is blocked. Nothing in this repository should be read
+  as claiming a completed fresh pilot.
+- **Deployed bytes were platform-dependent until `bde38c9`.** The frontend
+  submits `contracts/uptime_bond.py` verbatim, and a Windows checkout produced
+  CRLF (34,266 bytes, `93e1ddb9…`) where Linux produced LF (33,517 bytes,
+  `04fe3a7b…`) — the same commit deploying different contracts depending on who
+  built the bundle. `.gitattributes` now pins the file to LF and CI asserts it.
+  All existing deployments carry the CRLF variant; the logic is identical but
+  the bytes, transaction hash and derived address are not.
+- **SDK drift was an unpinned hazard, now closed.** Two breakages surfaced from
   the globally-installed `genlayer-js` (a dropped `CalldataAddress` export; a
-  changed write path). Nothing pins the SDK version, so tooling can break
-  between sessions.
+  changed write path). Since `a93ad56` the SDK is pinned to exactly **1.1.8**,
+  browser and scripts resolve one repository-local install, and CI asserts a
+  single copy and an identical `CalldataAddress` class on both sides.
 - **Wallet deltas include gas.** A settling party that signs `rule` / `release`
   pays that gas, so its *net* balance change is smaller than the gross transfer.
   Payout amounts above are the gross escrow movement (contract balance to zero,

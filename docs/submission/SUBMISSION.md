@@ -3,10 +3,32 @@
 > Prepared, not submitted. Production-grade and submission-ready for the GenLayer
 > Bradbury Testnet.
 
-## ⚠️ Remaining placeholders
+## ⚠️ Status — frozen at `v1.0.0-bradbury` (`11c39f9`)
 
-Everything else in this document is final. Only these need values, and all of
-them come from one live pilot run (`docs/pilot/PILOT-RUN.md`) plus the recording:
+The contract, frontend and tooling are production-grade for Bradbury, and the
+**four v2 agreements are deployed, settled and verified on-chain**. Those are
+real and independently checkable.
+
+**Fresh self-service deployment is currently blocked.** A deployment on
+27 July 2026 finalized with `FINISHED_WITH_RETURN`, 5 of 5 validators agreeing,
+and recorded storage changes containing the correct constructor state — yet no
+contract exists at the address its receipt named, at any state variant, and the
+explorer's contracts endpoint 404s it. The transaction envelope is byte-for-byte
+equivalent to a scripted deployment that worked, on the same pinned SDK; the one
+substantive difference is a non-zero `storage_proof` where the working control
+has zero. This is node-side as far as the client evidence can establish.
+
+**No funds were escrowed or lost.** Deployment transfers no value; the escrow is
+a separate later `fund()` call that was never made and cannot be made against a
+contract that does not exist. Cost was gas only.
+
+**The live two-wallet pilot is therefore prepared but NOT complete**, and
+nothing in this package should be read as claiming otherwise. Full evidence:
+[`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](../incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
+
+### Remaining placeholders
+
+These stay unfilled until fresh deployment is unblocked and the pilot runs:
 
 | # | Placeholder | Source | Section |
 |---|---|---|---|
@@ -118,11 +140,16 @@ contract source commit `6e29b67`):
 | 003-v2 | `FULL_REFUND` (10000 bps) | `0xDF1A19ACBE068373f067EF6E226EE564032f4676` |
 | 004-v2 | `INSUFFICIENT_EVIDENCE` | `0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d` |
 
-## Live pilot (two wallets, browser only)
+## Live pilot (two wallets, browser only) — PREPARED, NOT COMPLETED
+
+> **This pilot has not been run.** Fresh deployment on Bradbury is blocked by
+> the state-materialization incident above. The run sheet
+> (`docs/pilot/PILOT-RUN.md`) and evidence template
+> (`docs/pilot/EVIDENCE-RECORD.md`) are ready; the table below is the shape of
+> the record, not a record. Every value is a placeholder.
 
 A real two-party agreement created, funded, accepted, disputed, ruled, and
-released entirely through the deployed app — no scripts, no CLI. Run sheet:
-`docs/pilot/PILOT-RUN.md`. Full record: `docs/pilot/EVIDENCE-RECORD.md`.
+released entirely through the deployed app — no scripts, no CLI.
 
 | Field | Value |
 |---|---|
@@ -173,8 +200,9 @@ on camera. Link: **`<VIDEO_URL>`**
 - Contract Direct Mode suite (201 tests) + live integration read checks in the repo.
 - CI runs lint, typecheck, unit tests, build, e2e, the accessibility gate, the
   visual sweep, and a secret scan on every push.
-- Four contracts verified on-chain with recorded transaction hashes and balances,
-  plus one live two-wallet browser pilot (see Live pilot).
+- Four contracts verified on-chain with recorded transaction hashes and measured
+  balance movement. The two-wallet browser pilot is prepared but not run — fresh
+  deployment is blocked (see Status).
 
 ## Security considerations
 
@@ -196,10 +224,23 @@ on camera. Link: **`<VIDEO_URL>`**
   six-step agreement is a ~3-hour exercise. The UI is built around that: a hash
   is reported as *submitted*, never as success, and an interrupted deploy or
   action resumes tracking rather than resubmitting.
+- **Fresh deployment is blocked on Bradbury.** A finalized, 5/5-agreed,
+  `FINISHED_WITH_RETURN` deployment produced no contract at the address its
+  receipt named. The client artifacts are byte-equivalent to a deployment that
+  worked; the difference is a non-zero `storage_proof` against the control's
+  zero. No funds were escrowed. Frozen pending a GenLayer answer —
+  [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](../incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
+- **Deployed contract bytes were platform-dependent until `bde38c9`.** A Windows
+  checkout submitted CRLF source (34,266 bytes, `93e1ddb9…`) where Linux
+  submitted LF (33,517 bytes, `04fe3a7b…`). The Python logic is identical, but
+  the bytes, the transaction hash and the derived contract address are not. All
+  existing deployments carry the CRLF variant; `.gitattributes` now pins LF and
+  CI asserts it.
 
 ## Adoption roadmap
 
-1. **Now:** testnet product + verified demos + a completed two-wallet browser pilot.
+1. **Now:** testnet product + four verified on-chain agreements + a prepared
+   two-wallet pilot, blocked on the Bradbury materialization incident.
 2. **Pilot at scale:** repeat with a controlled outage against a live service;
    gather ruling accuracy and timing data across evidence sets.
 3. **Templates:** one-click SLA templates per service category; monitor adapters
