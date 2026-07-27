@@ -26,8 +26,60 @@ export function StatusChip({ status }: { status: string }) {
 
 /* -------------------------------------------------------------- settlement */
 
-function outcomeLabel(o: string) {
+export function outcomeLabel(o: string) {
   return o.replaceAll('_', ' ');
+}
+
+export interface SettlementFigures {
+  customerAtto: bigint;
+  providerAtto: bigint;
+  balance: bigint;
+  insufficient: boolean;
+  badge: { cls: string; text: string };
+}
+
+/**
+ * The single derivation of who is owed what, and whether the money has
+ * actually moved. Shared by the agreement panel and the homepage case
+ * studies so both can never drift apart.
+ *
+ * Payout state comes from the live contract balance, never from `status`:
+ * RESOLVED means the transfer was queued, not that anyone was paid.
+ */
+export function settlementFigures(
+  st: AgreementState, settlement: SettlementStatus | null,
+): SettlementFigures {
+  const escrow = BigInt(st.escrow_atto || '0');
+  const bps = BigInt(st.refund_bps || 0);
+  const insufficient = st.outcome === 'INSUFFICIENT_EVIDENCE';
+
+  // Prefer the contract's own settlement view; fall back to derived amounts.
+  // INSUFFICIENT_EVIDENCE has no automatic settlement at all, so neither party
+  // is owed anything — the arithmetic split would misstate that as a payout.
+  const customerAtto = insufficient ? 0n
+    : settlement && st.status === 'RESOLVED'
+      ? BigInt(settlement.expected_customer_atto)
+      : (escrow * bps) / 10000n;
+  const providerAtto = insufficient ? 0n
+    : settlement && st.status === 'RESOLVED'
+      ? BigInt(settlement.expected_provider_atto)
+      : escrow - (escrow * bps) / 10000n;
+  const balance = settlement ? BigInt(settlement.contract_balance_atto) : escrow;
+
+  let badge: { cls: string; text: string };
+  if (insufficient) {
+    badge = { cls: 'pay-custodied', text: 'Escrow custodied' };
+  } else if (settlement?.payout_complete) {
+    badge = { cls: 'pay-final', text: 'Payout finalized' };
+  } else if (st.status === 'RESOLVED') {
+    badge = { cls: 'pay-queued', text: 'Payout queued' };
+  } else if (st.status === 'RULED') {
+    badge = { cls: 'pay-queued', text: 'Ruling final — release pending' };
+  } else {
+    badge = { cls: 'pay-custodied', text: 'In escrow' };
+  }
+
+  return { customerAtto, providerAtto, balance, insufficient, badge };
 }
 
 /** The headline panel: outcome, exact payout split, and whether the escrow has
@@ -50,32 +102,8 @@ export function Settlement({
     );
   }
 
-  const escrow = BigInt(st.escrow_atto);
-  const bps = BigInt(st.refund_bps);
-  const insufficient = oc === 'INSUFFICIENT_EVIDENCE';
-
-  // Prefer the contract's own settlement view; fall back to derived amounts.
-  const customerAtto = settlement && st.status === 'RESOLVED'
-    ? BigInt(settlement.expected_customer_atto)
-    : (escrow * bps) / 10000n;
-  const providerAtto = settlement && st.status === 'RESOLVED'
-    ? BigInt(settlement.expected_provider_atto)
-    : escrow - (escrow * bps) / 10000n;
-  const balance = settlement ? BigInt(settlement.contract_balance_atto) : escrow;
-
-  // Payout state, derived from ground truth (the live balance), not status.
-  let badge: { cls: string; text: string };
-  if (insufficient) {
-    badge = { cls: 'pay-custodied', text: 'Escrow custodied' };
-  } else if (settlement?.payout_complete) {
-    badge = { cls: 'pay-final', text: 'Payout finalized' };
-  } else if (st.status === 'RESOLVED') {
-    badge = { cls: 'pay-queued', text: 'Payout queued' };
-  } else if (st.status === 'RULED') {
-    badge = { cls: 'pay-queued', text: 'Ruling final — release pending' };
-  } else {
-    badge = { cls: 'pay-custodied', text: 'In escrow' };
-  }
+  const { customerAtto, providerAtto, balance, insufficient, badge } =
+    settlementFigures(st, settlement);
 
   return (
     <div className="card settlement">

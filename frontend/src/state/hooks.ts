@@ -76,6 +76,47 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
   return { st, settlement, deadlock, loading, error, degraded, refreshedAt, refresh };
 }
 
+export interface CaseSummary {
+  st: AgreementState;
+  settlement: SettlementStatus | null;
+}
+
+/**
+ * One-shot read of several agreements at once, for summary displays such as
+ * the homepage case studies. Deliberately does not poll: these are settled,
+ * immutable outcomes, and a landing page should not hold an open read loop.
+ * A contract that fails to read is simply omitted, never faked.
+ */
+export function useCaseSummaries(addresses: readonly string[]) {
+  const [rows, setRows] = useState<Record<string, CaseSummary>>({});
+  const [loading, setLoading] = useState(true);
+  const key = addresses.join(',');
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    const list = key ? key.split(',') : [];
+    void (async () => {
+      const out: Record<string, CaseSummary> = {};
+      await Promise.all(list.map(async (address) => {
+        try {
+          const [st, settlement] = await Promise.all([
+            readAgreement(address),
+            readSettlement(address).catch(() => null),
+          ]);
+          out[address] = { st, settlement };
+        } catch {
+          // Leave this address out; the card falls back to its pinned summary.
+        }
+      }));
+      if (alive) { setRows(out); setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [key]);
+
+  return { rows, loading };
+}
+
 export interface WriteAction {
   tx: TxTracker;
   busy: boolean;
