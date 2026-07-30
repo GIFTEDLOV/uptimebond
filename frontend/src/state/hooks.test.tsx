@@ -54,6 +54,9 @@ vi.mock('../chain', () => ({
 }));
 vi.mock('../lib/registry', () => ({
   upsertAgreement: vi.fn(), setPendingTx: vi.fn(), clearPendingTx: vi.fn(),
+  // The cross-tab staleness check reads the registry; these tests are about
+  // address isolation and read scheduling, so it always finds nothing.
+  getAgreement: vi.fn(() => undefined),
 }));
 
 const { useLiveAgreement } = await import('./hooks');

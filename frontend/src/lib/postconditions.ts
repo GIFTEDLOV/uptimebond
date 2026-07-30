@@ -141,6 +141,37 @@ export function checkPostcondition(input: PostconditionInput): PostconditionResu
 }
 
 /**
+ * What a rejected write means, in the terms a party cares about: did anything
+ * change, and did any money move.
+ *
+ * A guard that reverts is the contract working. `release()` called twice is the
+ * clearest case — the second call is refused because the agreement is already
+ * RESOLVED, no state changes and no funds move. Reporting that as a bare
+ * "execution failed" reads like money may be in an unknown place, which is the
+ * opposite of what happened.
+ */
+export function rejectionSummary(method: string, st: AgreementState | null): string {
+  const nothingChanged = 'no state changed and no funds moved';
+
+  if (method === 'release' && st?.status === 'RESOLVED') {
+    return `This agreement was already released and is RESOLVED — from another tab or by the `
+      + `counterparty. The duplicate release was safely rejected by the contract: `
+      + `${nothingChanged}. The settlement recorded on-chain is the first release, unchanged.`;
+  }
+  if (method === 'release' && st?.outcome === 'INSUFFICIENT_EVIDENCE') {
+    return `release() is refused for an INSUFFICIENT_EVIDENCE ruling by design, and was safely `
+      + `rejected: ${nothingChanged}. The escrow stays custodied pending a mutual settlement, a `
+      + 'native appeal, or the deadlock fallback.';
+  }
+  if (st) {
+    return `${method}() was safely rejected — the contract does not permit it while the agreement `
+      + `is ${st.status}: ${nothingChanged}.`;
+  }
+  return `${method}() was safely rejected by the contract: ${nothingChanged}. Live state could `
+    + 'not be read back, so confirm the agreement status before retrying.';
+}
+
+/**
  * Whether the provider role may be recorded locally.
  *
  * Saving it the moment `accept_sla` is submitted marks the user as the provider

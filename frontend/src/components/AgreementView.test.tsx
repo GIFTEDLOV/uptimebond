@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import type { AgreementState } from '../chain';
+import type { AgreementState, SettlementStatus, TxTracker } from '../chain';
+import type { LiveRead, WriteAction } from '../state/hooks';
 
 /**
  * Regression guard for the dispute path.
@@ -13,15 +14,12 @@ import type { AgreementState } from '../chain';
  * user typed is what reaches the contract call.
  */
 
-const run = vi.fn();
-const refresh = vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true }));
 const CUST = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 const PROV = '0x06BBFc5F5A06953fFDB117DB376302d6Bd80eBdc';
+const HASH_A = '0xaaa1111111111111111111111111111111111111111111111111111111111111';
+const HASH_B = '0xbbb2222222222222222222222222222222222222222222222222222222222222';
 
-/** Flipped by tests that need the unreadable-contract branch. */
-let live: { st: AgreementState | null; error: string | null } = { st: null, error: null };
-
-const ACTIVE: AgreementState = {
+const BASE: AgreementState = {
   customer: CUST, provider: PROV, status: 'ACTIVE', resolution_mode: '',
   escrow_atto: '10000000000000000', incident_window: '', dispute_opened_at: 0,
   outcome: '', refund_bps: 0, maintenance_qualified: false, breached_clause_ids: [],
@@ -29,10 +27,50 @@ const ACTIVE: AgreementState = {
   settlement_proposer: '0x0000000000000000000000000000000000000000',
   settlement_refund_bps: 0,
 };
+const state = (over: Partial<AgreementState> = {}): AgreementState => ({ ...BASE, ...over });
+
+const ACTIVE = state();
+const AWAITING = state({ status: 'AWAITING_PROVIDER_ACCEPTANCE' });
+const RULED = state({ status: 'RULED', outcome: 'FULL_REFUND', refund_bps: 10000 });
+const RESOLVED = state({
+  status: 'RESOLVED', outcome: 'FULL_REFUND', refund_bps: 10000, resolution_mode: 'RULING_RELEASE',
+});
+
+const PAID: SettlementStatus = {
+  status: 'RESOLVED', settlement_queued: true, payout_complete: true,
+  contract_balance_atto: '0', escrow_atto: '10000000000000000',
+  expected_customer_atto: '10000000000000000', expected_provider_atto: '0',
+};
+
+/**
+ * Everything the mocked hooks read, so a test can pose the exact situation that
+ * produced the incident: what this tab is *displaying*, what a fresh read of the
+ * contract *actually returns*, and what another tab has already seen.
+ */
+let live: {
+  st: AgreementState | null;
+  error: string | null;
+  settlement: SettlementStatus | null;
+  /** What refresh() resolves with — the live contract, which may have moved on
+   *  from the state this tab is showing. Defaults to `st`. */
+  fresh?: AgreementState | null;
+  supersededBy: string | null;
+};
+let account: string;
+let tx: TxTracker;
+
+const run = vi.fn<WriteAction['run']>(async () => HASH_A);
+const refresh = vi.fn<() => Promise<LiveRead>>(async () => ({
+  ok: true,
+  st: live.fresh === undefined ? live.st : live.fresh,
+  settlement: live.settlement,
+  deadlock: null,
+}));
+const reset = vi.fn(() => { tx = { phase: 'idle' }; });
 
 vi.mock('../state/wallet', () => ({
   useWallet: () => ({
-    account: CUST, provider: {}, hasWallet: true, wrongChain: false,
+    account, provider: {}, hasWallet: true, wrongChain: false,
     connecting: false, error: null, chainId: 4221,
     connect: vi.fn(), disconnect: vi.fn(), switchNetwork: vi.fn(), clearError: vi.fn(),
   }),
@@ -43,11 +81,17 @@ vi.mock('../state/hooks', async (importOriginal) => {
   return {
     ...actual,
     useLiveAgreement: () => ({
-      st: live.st, settlement: null, deadlock: null, loading: false,
-      error: live.error, degraded: false, refreshedAt: Date.now(), refresh,
+      st: live.st, settlement: live.settlement, deadlock: null, loading: false,
+      error: live.error, degraded: false, refreshedAt: Date.now(),
+      supersededBy: live.supersededBy, refresh,
     }),
     useWriteAction: () => ({
-      tx: { phase: 'idle' as const }, busy: false, run, reset: vi.fn(), resume: vi.fn(),
+      tx,
+      busy: tx.phase !== 'idle' && tx.phase !== 'finalized'
+        && tx.phase !== 'execution-error' && tx.phase !== 'failed',
+      run,
+      reset,
+      resume: vi.fn(),
     }),
   };
 });
@@ -59,18 +103,32 @@ vi.mock('../chain', async (importOriginal) => {
 
 const { AgreementView } = await import('./AgreementView');
 
+const ADDRESS = '0x965C9B454867273F612BD48d181Ec418391750d5';
+
+beforeEach(() => {
+  localStorage.clear();
+  account = CUST;
+  tx = { phase: 'idle' };
+  live = { st: ACTIVE, error: null, settlement: null, supersededBy: null };
+  run.mockClear();
+  run.mockImplementation(async () => HASH_A);
+  refresh.mockClear();
+  refresh.mockImplementation(async () => ({
+    ok: true,
+    st: live.fresh === undefined ? live.st : live.fresh,
+    settlement: live.settlement,
+    deadlock: null,
+  }));
+  reset.mockClear();
+});
+
 const openDisputeDialog = async () => {
-  render(<AgreementView address="0x965C9B454867273F612BD48d181Ec418391750d5" />);
+  render(<AgreementView address={ADDRESS} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Open dispute' }));
   return screen.findByRole('dialog');
 };
 
 describe('open_dispute argument collection', () => {
-  beforeEach(() => {
-    run.mockClear();
-    localStorage.clear();
-    live = { st: ACTIVE, error: null };
-  });
 
   it('disables confirmation until an incident window is entered', async () => {
     const dialog = await openDisputeDialog();
@@ -117,15 +175,14 @@ describe('open_dispute argument collection', () => {
  * press produces a visible loading state and a visible, timestamped outcome.
  */
 describe('unreadable agreement — Check again', () => {
-  const ADDRESS = '0xc09d70CE30BAd8ce8519C40Ef12C037B9cfBd99f';
+  const MISSING = '0xc09d70CE30BAd8ce8519C40Ef12C037B9cfBd99f';
 
   beforeEach(() => {
     refresh.mockReset();
-    localStorage.clear();
-    live = { st: null, error: 'contract not found at address' };
+    live = { st: null, error: 'contract not found at address', settlement: null, supersededBy: null };
   });
 
-  const renderView = () => render(<AgreementView address={ADDRESS} />);
+  const renderView = () => render(<AgreementView address={MISSING} />);
 
   it('warns that the address may hold no agreement and offers no funding path', async () => {
     renderView();
@@ -178,5 +235,240 @@ describe('unreadable agreement — Check again', () => {
     renderView();
     fireEvent.click(await screen.findByRole('button', { name: 'Check again' }));
     await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/read successfully/i));
+  });
+});
+
+/**
+ * The pilot's duplicate release.
+ *
+ * A provider tab sat open on RULED while the customer released from another tab.
+ * The contract reached RESOLVED; the stale tab still rendered Release, and
+ * clicking it signed a transaction that reverted with FINISHED_WITH_ERROR half
+ * an hour later. The contract refused it correctly — nothing changed and no
+ * funds moved — but the UI should never have offered the button, and must not
+ * carry a write to signature on state it has not re-read.
+ *
+ * These tests pin the properties that close that window. They are about the
+ * frontend only: the contract's guard is not modified and is what makes the
+ * duplicate harmless.
+ */
+describe('stale state cannot carry a write to signature', () => {
+  beforeEach(() => {
+    // What this tab is displaying: the state before the counterparty released.
+    live.st = RULED;
+  });
+
+  it('aborts before opening the dialog when live state is already RESOLVED', async () => {
+    live.fresh = RESOLVED; // what the contract actually says now
+    render(<AgreementView address={ADDRESS} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/release\(\) was not submitted/i);
+    expect(alert.textContent).toMatch(/no longer available/i);
+    expect(alert.textContent).toMatch(/RESOLVED/);
+    expect(alert.textContent).toMatch(/[Nn]othing was signed and nothing was spent/);
+    // The confirmation dialog never opens, and no write is attempted.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(run).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('aborts at submit when the agreement resolves while the dialog is open', async () => {
+    live.fresh = RULED; // still releasable when the dialog is opened
+    render(<AgreementView address={ADDRESS} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+    const dialog = await screen.findByRole('dialog');
+
+    // The counterparty releases while the dialog sits open.
+    live.fresh = RESOLVED;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Release settlement' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/release\(\) was not submitted/i);
+    expect(alert.textContent).toMatch(/RESOLVED/);
+    expect(run).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('does not submit when live state cannot be read at all', async () => {
+    refresh.mockResolvedValue({ ok: false, error: 'contract not found at address' });
+    render(<AgreementView address={ADDRESS} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/could not be confirmed/i);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('withdraws Release the moment another tab reports RESOLVED', async () => {
+    const view = render(<AgreementView address={ADDRESS} />);
+    expect(await screen.findByRole('button', { name: 'Release settlement' })).toBeTruthy();
+
+    // Another tab read RESOLVED from the contract before this tab did.
+    live.supersededBy = 'RESOLVED';
+    view.rerender(<AgreementView address={ADDRESS} />);
+
+    expect(screen.queryByRole('button', { name: 'Release settlement' })).toBeNull();
+    expect(screen.getByText(/moved to RESOLVED elsewhere/i)).toBeTruthy();
+  });
+
+  it('closes an open dialog when another tab reports RESOLVED', async () => {
+    live.fresh = RULED;
+    const view = render(<AgreementView address={ADDRESS} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+
+    live.supersededBy = 'RESOLVED';
+    view.rerender(<AgreementView address={ADDRESS} />);
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('reports a duplicate release as safely rejected', async () => {
+    // The transaction this tab did submit, before the state moved: it reaches
+    // consensus and the contract's guard refuses it.
+    live.fresh = RULED;
+    const view = render(<AgreementView address={ADDRESS} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Release settlement' }));
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+
+    // Consensus accepted it; execution reverted. Live state is RESOLVED from the
+    // first release, which is why.
+    tx = {
+      phase: 'execution-error', method: 'release', hash: HASH_A,
+      error: 'Consensus accepted the transaction but contract execution failed.',
+    };
+    live.st = RESOLVED;
+    live.fresh = RESOLVED;
+    live.settlement = PAID;
+    view.rerender(<AgreementView address={ADDRESS} />);
+
+    const alerts = await waitFor(() => {
+      const found = screen.getAllByRole('alert')
+        .filter((el) => /safely rejected/i.test(el.textContent ?? ''));
+      expect(found.length).toBe(1);
+      return found;
+    });
+    const text = alerts[0].textContent ?? '';
+    expect(text).toMatch(/already released and is RESOLVED/i);
+    expect(text).toMatch(/no state changed and no funds moved/i);
+    // A rejected write must never be reported as a confirmed one.
+    expect(screen.queryByText(/release\(\) confirmed on-chain/i)).toBeNull();
+  });
+});
+
+/**
+ * Postconditions belong to one transaction.
+ *
+ * Held against a method name alone, `accept_sla`'s postcondition was recomputed
+ * from whatever state was current and rendered under whichever transaction was
+ * being tracked — so a release could display an accept_sla verdict derived from
+ * post-release state. It is now welded to the hash and method it was computed
+ * for.
+ */
+describe('postconditions are bound to their transaction', () => {
+  /** Take the provider from awaiting-acceptance to a finalized accept_sla with
+   *  its postcondition on screen. */
+  const acceptSla = async () => {
+    account = PROV;
+    live.st = AWAITING;
+    const view = render(<AgreementView address={ADDRESS} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept SLA' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Accept SLA' }));
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+
+    tx = { phase: 'finalized', method: 'accept_sla', hash: HASH_A, succeeded: true };
+    live.st = ACTIVE;
+    live.fresh = ACTIVE;
+    view.rerender(<AgreementView address={ADDRESS} />);
+    await waitFor(() => expect(
+      screen.getByText(/accept_sla\(\) confirmed on-chain/i),
+    ).toBeTruthy());
+    return view;
+  };
+
+  it('never shows the accept_sla postcondition under a release transaction', async () => {
+    const view = await acceptSla();
+
+    // The agreement runs its course and is released. The release is a different
+    // transaction; the accept_sla verdict is not a statement about it.
+    live.st = RULED;
+    live.fresh = RULED;
+    view.rerender(<AgreementView address={ADDRESS} />);
+
+    run.mockImplementation(async () => HASH_B);
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Release settlement' }));
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(2));
+
+    tx = { phase: 'finalized', method: 'release', hash: HASH_B, succeeded: true };
+    live.st = RESOLVED;
+    live.fresh = RESOLVED;
+    live.settlement = PAID;
+    view.rerender(<AgreementView address={ADDRESS} />);
+
+    await waitFor(() => expect(screen.getByText(/release\(\) confirmed on-chain/i)).toBeTruthy());
+    expect(screen.queryByText(/accept_sla/i)).toBeNull();
+  });
+
+  it('drops the accept_sla verdict when the tracker moves to another transaction', async () => {
+    const view = await acceptSla();
+
+    // A reload resumes a persisted release transaction: the tracker carries a
+    // different hash and method without any action having been started in this
+    // view, so nothing else clears the accept_sla verdict. It must still not be
+    // rendered beneath a release.
+    tx = { phase: 'finalized', method: 'release', hash: HASH_B, succeeded: true };
+    live.st = RESOLVED;
+    live.fresh = RESOLVED;
+    live.settlement = PAID;
+    view.rerender(<AgreementView address={ADDRESS} />);
+
+    expect(screen.queryByText(/accept_sla/i)).toBeNull();
+  });
+
+  it('does not recompute a historical accept_sla postcondition after later state changes', async () => {
+    const view = await acceptSla();
+
+    // Later, unrelated state movement. The finalized accept_sla transaction is
+    // still the one being tracked, so its verdict stays — as computed then, not
+    // re-derived against DISPUTED/RULED state, which would invert it.
+    live.st = state({ status: 'DISPUTED', incident_window: 'May 2026' });
+    live.fresh = live.st;
+    view.rerender(<AgreementView address={ADDRESS} />);
+    expect(screen.getByText(/accept_sla\(\) confirmed on-chain/i)).toBeTruthy();
+    expect(screen.queryByText(/accept_sla\(\) finalized but did not take effect/i)).toBeNull();
+
+    live.st = RULED;
+    live.fresh = RULED;
+    view.rerender(<AgreementView address={ADDRESS} />);
+    expect(screen.getByText(/accept_sla\(\) confirmed on-chain/i)).toBeTruthy();
+    expect(screen.queryByText(/did not take effect/i)).toBeNull();
+  });
+
+  it('clears the previous postcondition as soon as a new action begins', async () => {
+    const view = await acceptSla();
+
+    live.st = RULED;
+    live.fresh = RULED;
+    view.rerender(<AgreementView address={ADDRESS} />);
+    expect(screen.getByText(/accept_sla\(\) confirmed on-chain/i)).toBeTruthy();
+
+    // Merely starting the next action retires the previous verdict: it must not
+    // sit on screen next to a new confirmation dialog, where it reads as being
+    // about the action about to be taken.
+    fireEvent.click(await screen.findByRole('button', { name: 'Release settlement' }));
+
+    await waitFor(() => expect(screen.queryByText(/accept_sla\(\) confirmed on-chain/i)).toBeNull());
+    expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 });

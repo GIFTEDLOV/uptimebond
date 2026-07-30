@@ -5,7 +5,9 @@ import {
   pollTx, readAgreement, readDeadlock, readSettlement, sendTx,
   type AgreementState, type DeadlockStatus, type SettlementStatus, type TxTracker,
 } from '../chain';
-import { clearPendingTx, setPendingTx, upsertAgreement, type RegistryRole } from '../lib/registry';
+import {
+  clearPendingTx, getAgreement, setPendingTx, upsertAgreement, type RegistryRole,
+} from '../lib/registry';
 import { sameAddress } from '../lib/validation';
 
 /**
@@ -29,6 +31,23 @@ export function readableError(e: unknown): string {
     .trim();
 }
 
+/**
+ * The outcome of one read, carrying the state it read.
+ *
+ * The snapshot is returned rather than only committed to React state because a
+ * caller that must decide something *now* — may this write still be submitted? —
+ * cannot wait for a render. Reading `st` from the hook right after awaiting
+ * `refresh()` yields the pre-refresh value, which is exactly the stale state the
+ * check exists to reject.
+ */
+export interface LiveRead {
+  ok: boolean;
+  error?: string;
+  st?: AgreementState | null;
+  settlement?: SettlementStatus | null;
+  deadlock?: DeadlockStatus | null;
+}
+
 export interface LiveAgreement {
   st: AgreementState | null;
   settlement: SettlementStatus | null;
@@ -37,11 +56,66 @@ export interface LiveAgreement {
   error: string | null;
   degraded: boolean;
   refreshedAt: number | null;
-  /** Resolves with the outcome of this read. Callers that surface a Retry
-   *  control need it: `error` alone cannot distinguish "failed again with the
-   *  same message" from "nothing happened", which is what made the old Retry
-   *  button look dead. */
-  refresh: () => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * A status another tab read from this contract more recently than we did,
+   * which disagrees with the state in hand. Non-null means the state on screen
+   * is known-stale and nothing may be offered or submitted from it.
+   */
+  supersededBy: string | null;
+  /** Resolves with the outcome of this read, and with the state it read.
+   *  Callers that surface a Retry control need the outcome: `error` alone cannot
+   *  distinguish "failed again with the same message" from "nothing happened",
+   *  which is what made the old Retry button look dead. */
+  refresh: () => Promise<LiveRead>;
+}
+
+/**
+ * A status for this address observed in shared browser storage, when it
+ * disagrees with the state this tab is holding.
+ *
+ * Two tabs on the same agreement share no React state. A provider tab left open
+ * on RULED keeps offering Release for up to a full poll interval after the
+ * customer has released from another tab and the contract has moved to
+ * RESOLVED — that is how a duplicate release came to be signed during the
+ * pilot. Every tab writes the status and read time it observed into the local
+ * registry, and that write raises `storage` in every *other* tab (plus
+ * `uptimebond:registry` in its own), so another tab's read becomes an immediate
+ * signal here instead of a 20-second window.
+ *
+ * The comparison is guarded on read time. A registry entry left over from an
+ * earlier session is *older* than the state in hand, not newer, and must never
+ * suppress actions — only an observation made after our own read supersedes it.
+ */
+export function useSupersededStatus(
+  address: string | null, current: string | null, readAt: number | null,
+): string | null {
+  const [observed, setObserved] = useState<{ status: string; at: number } | null>(null);
+
+  useEffect(() => {
+    setObserved(null);
+    if (!address) return;
+    const check = () => {
+      const e = getAgreement(address);
+      setObserved((prev) => {
+        if (!e?.lastStatus || typeof e.refreshedAt !== 'number') return null;
+        // Same observation: return the previous object so React can bail out
+        // rather than re-render on every registry write.
+        if (prev && prev.status === e.lastStatus && prev.at === e.refreshedAt) return prev;
+        return { status: e.lastStatus, at: e.refreshedAt };
+      });
+    };
+    check();
+    window.addEventListener('storage', check);
+    window.addEventListener('uptimebond:registry', check);
+    return () => {
+      window.removeEventListener('storage', check);
+      window.removeEventListener('uptimebond:registry', check);
+    };
+  }, [address]);
+
+  if (!observed || !current) return null;
+  if (observed.status === current) return null;
+  return observed.at > (readAt ?? 0) ? observed.status : null;
 }
 
 /** Live agreement reader with exponential backoff on transient RPC failure and
@@ -81,7 +155,7 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
     return () => { generation.current += 1; };
   }, [address]);
 
-  const refresh = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+  const refresh = useCallback(async (): Promise<LiveRead> => {
     if (!address) { setLoading(false); return { ok: false, error: 'No address.' }; }
     const mine = generation.current;
     const stale = () => mine !== generation.current;
@@ -95,9 +169,12 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
       if (stale()) return { ok: false, error: 'Superseded by a newer address.' };
       setSt(s); setDeadlock(d); setSettlement(p);
       setError(null); setDegraded(false); failures.current = 0;
-      setRefreshedAt(Date.now());
-      upsertAgreement({ address, lastStatus: s.status, lastOutcome: s.outcome || undefined, refreshedAt: Date.now() });
-      return { ok: true };
+      // One timestamp for both the hook state and the registry: the cross-tab
+      // check compares them, so they must not drift by a millisecond.
+      const at = Date.now();
+      setRefreshedAt(at);
+      upsertAgreement({ address, lastStatus: s.status, lastOutcome: s.outcome || undefined, refreshedAt: at });
+      return { ok: true, st: s, settlement: p, deadlock: d };
     } catch (e) {
       if (stale()) return { ok: false, error: 'Superseded by a newer address.' };
       failures.current += 1;
@@ -142,7 +219,19 @@ export function useLiveAgreement(address: string | null, intervalMs = 20000): Li
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [address, refresh, intervalMs]);
 
-  return { st, settlement, deadlock, loading, error, degraded, refreshedAt, refresh };
+  const supersededBy = useSupersededStatus(address, st?.status ?? null, refreshedAt);
+
+  // Another tab has seen a newer status: re-read now rather than waiting out the
+  // poll interval, so the stale state is replaced instead of merely suppressed.
+  // No loop is possible — a successful read makes the two agree, and a failed
+  // one leaves `supersededBy` unchanged, so this effect does not re-fire.
+  useEffect(() => {
+    if (supersededBy && !inFlight.current) void refresh();
+  }, [supersededBy, refresh]);
+
+  return {
+    st, settlement, deadlock, loading, error, degraded, refreshedAt, supersededBy, refresh,
+  };
 }
 
 export interface CaseSummary {
@@ -189,10 +278,14 @@ export function useCaseSummaries(addresses: readonly string[]) {
 export interface WriteAction {
   tx: TxTracker;
   busy: boolean;
+  /** Resolves with the submitted transaction hash, or null when nothing was
+   *  submitted. Callers bind their postcondition to that hash: a postcondition
+   *  held against a method name alone gets re-evaluated — and re-displayed —
+   *  under whatever transaction comes next. */
   run: (opts: {
     method: string; args?: unknown[]; valueWei?: bigint;
     account: string; provider: unknown; address: string;
-  }) => Promise<void>;
+  }) => Promise<string | null>;
   reset: () => void;
   /** Resume tracking a previously-submitted hash after a reload. */
   resume: (address: string, hash: string, method: string, startedAt: number) => void;
@@ -256,11 +349,12 @@ export function useWriteAction(onSettled?: () => void): WriteAction {
       const msg = err.code === 4001 ? 'Signature rejected in the wallet.' : (err.message ?? String(e));
       // No hash was issued, so nothing committed — safe to let the user retry.
       setTx({ phase: 'failed', method, error: `Not submitted: ${msg}`, startedAt });
-      return;
+      return null;
     }
     setPendingTx(address, { hash, method, startedAt });
     setTx({ phase: 'submitted', method, hash, startedAt });
     track(address, hash, method, startedAt);
+    return hash;
   }, [track, stop]);
 
   const resume: WriteAction['resume'] = useCallback((address, hash, method, startedAt) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkPostcondition, providerRoleConfirmed } from './postconditions';
+import { checkPostcondition, providerRoleConfirmed, rejectionSummary } from './postconditions';
 import type { AgreementState, SettlementStatus } from '../chain';
 
 /**
@@ -133,6 +133,41 @@ describe('lifecycle postconditions', () => {
 
   it('an unknown method asserts nothing rather than claiming success', () => {
     expect(checkPostcondition({ method: 'whatever', st: st(), settlement: null }).ok).toBeNull();
+  });
+});
+
+/**
+ * A reverted guard is the contract working. The pilot's duplicate release
+ * reverted with FINISHED_WITH_ERROR and changed nothing — describing that as a
+ * bare execution failure reads as though the escrow might be somewhere
+ * unknown, which is the opposite of what happened.
+ */
+describe('rejectionSummary', () => {
+  it('names a duplicate release as safely rejected, with no state or fund movement', () => {
+    const s = rejectionSummary('release', st({ status: 'RESOLVED', outcome: 'FULL_REFUND' }));
+    expect(s).toMatch(/already released and is RESOLVED/i);
+    expect(s).toMatch(/safely rejected/i);
+    expect(s).toMatch(/no state changed and no funds moved/i);
+    expect(s).toMatch(/the first release, unchanged/i);
+  });
+
+  it('explains a release refused for an insufficient-evidence ruling', () => {
+    const s = rejectionSummary('release', st({ status: 'RULED', outcome: 'INSUFFICIENT_EVIDENCE' }));
+    expect(s).toMatch(/INSUFFICIENT_EVIDENCE/);
+    expect(s).toMatch(/safely rejected/i);
+    expect(s).toMatch(/custodied/i);
+  });
+
+  it('falls back to the live status for any other refused method', () => {
+    const s = rejectionSummary('approve_service', st({ status: 'DISPUTED' }));
+    expect(s).toMatch(/approve_service\(\) was safely rejected/);
+    expect(s).toMatch(/DISPUTED/);
+  });
+
+  it('says so plainly when live state could not be read back', () => {
+    const s = rejectionSummary('release', null);
+    expect(s).toMatch(/safely rejected/i);
+    expect(s).toMatch(/confirm the agreement status/i);
   });
 });
 
