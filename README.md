@@ -1,36 +1,29 @@
 # UptimeBond
 
-**SLA escrow that adjudicates itself.** A customer pays for a service and holds
-that payment in escrow against a provider's uptime commitment. If they disagree
-about whether the SLA was met, GenLayer validators independently re-fetch the
-evidence, derive the ruling, and settle the escrow — with no trusted middleman
-and no off-chain coordinator.
+**Escrow that settles service-level disputes using GenLayer validator consensus.**
 
-Live on GenLayer Bradbury Testnet. Contract source: [`contracts/uptime_bond.py`](contracts/uptime_bond.py).
+[![CI](https://github.com/GIFTEDLOV/uptimebond/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/GIFTEDLOV/uptimebond/actions/workflows/ci.yml)
+[![Network: Bradbury Testnet](https://img.shields.io/badge/network-GenLayer%20Bradbury%20(4221)-8a6a3b)](https://explorer-bradbury.genlayer.com/)
+[![Live pilot: complete](https://img.shields.io/badge/live%20pilot-complete-3f6b3f)](docs/pilot/runs/2026-07-29-pilot.md)
+[![genlayer-js 1.1.8](https://img.shields.io/badge/genlayer--js-1.1.8%20(pinned)-6b6b6b)](frontend/package.json)
+[![Release v1.0.1-bradbury-pilot](https://img.shields.io/badge/release-v1.0.1--bradbury--pilot-444444)](https://github.com/GIFTEDLOV/uptimebond/releases/tag/v1.0.1-bradbury-pilot)
 
-> **Status — live two-wallet pilot complete ✓**
->
-> A fresh agreement was deployed from the browser on **29 July 2026** and driven
-> end to end by two separate wallets: **[`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a)**.
-> Escrow **0.01 GEN** funded, SLA accepted, dispute opened, validators ruled
-> **`PARTIAL_REFUND` (2500 bps)** from the evidence alone, settlement released —
-> **customer 25% (0.0025 GEN), provider 75% (0.0075 GEN), contract balance zero.**
-> The four v2 agreements below also remain deployed, settled and verified.
->
-> The provider then submitted a **duplicate `release()` from a stale tab**. The
-> contract refused it — 5/5 DISAGREE, `FINISHED_WITH_ERROR`, **no state change
-> and no additional funds moved**. An unplanned negative test that the
-> single-shot guard passed.
->
-> Full record: [`docs/pilot/runs/2026-07-29-pilot.md`](docs/pilot/runs/2026-07-29-pilot.md).
-> The frontend was hardened in `0505189` so a tab holding stale state cannot
-> carry a write to signature and postconditions cannot be misattributed across
-> transactions.
->
-> The earlier **materialization incident is closed as no longer reproducing** —
-> deployments resumed working and the replacement deployment materialized
-> normally. The cause was never explained and the original evidence stands:
-> [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
+![UptimeBond home page: the headline "Made for agreements that keep their word", a summary explaining that UptimeBond holds service payments in escrow and lets GenLayer validators evaluate public SLA evidence, and Create Agreement and Explore Live Cases buttons](docs/assets/screenshots/01-homepage.png)
+
+---
+
+## Live links
+
+| | |
+|---|---|
+| **Application** | https://uptimebond.vercel.app |
+| **Repository** | https://github.com/GIFTEDLOV/uptimebond |
+| **Canonical contract** | [`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a) |
+| **In the app** | [uptimebond.vercel.app/agreement/0x5006…dCc0a](https://uptimebond.vercel.app/agreement/0x5006115944D7F593E401239aeDb64abEF13dCc0a) |
+| **Release** | [`v1.0.1-bradbury-pilot`](https://github.com/GIFTEDLOV/uptimebond/releases/tag/v1.0.1-bradbury-pilot) |
+| **Pilot record** | [`docs/pilot/runs/2026-07-29-pilot.md`](docs/pilot/runs/2026-07-29-pilot.md) |
+
+Testnet only. No real funds, no sign-up, no custody.
 
 ---
 
@@ -39,533 +32,476 @@ Live on GenLayer Bradbury Testnet. Contract source: [`contracts/uptime_bond.py`]
 Service level agreements are promises about facts — "99.5% uptime this month" —
 but the facts are held by the party with the least interest in reporting them
 honestly. When a customer believes the SLA was breached and the provider
-believes it wasn't, three bad options follow:
+believes it was not, every available option is bad:
 
-1. **Trust the provider's status page.** The provider grades its own homework
-   and decides what counts as "planned maintenance".
-2. **Escalate to support.** Slow, opaque, and the provider still decides.
-3. **Litigate or arbitrate.** Costs more than the service credit is worth, so
-   in practice the customer absorbs the loss.
+- **Trust the provider's status page.** The provider grades its own homework and
+  decides what counts as planned maintenance.
+- **Escalate to support.** Slow, opaque, and the provider still decides.
+- **Litigate or arbitrate.** Costs more than the service credit is worth, so in
+  practice the customer absorbs the loss.
+- **Escrow with a middleman.** Now someone else holds the money and *also*
+  decides. The custody risk is real and the adjudication is still centralized.
 
-The dispute is usually small, factual, and repetitive — exactly the shape that
-should be automatable, and exactly the shape that no existing mechanism handles
-at a proportionate cost.
+The dispute is usually small, factual and repetitive — exactly the shape that
+should be automatable, and exactly the shape no existing mechanism handles at a
+proportionate cost.
 
-### Why centralized AI is insufficient
+## The solution
 
-An LLM can read an SLA and an uptime report and reach a sound conclusion. That
-is not the hard part. The hard part is that **the losing party has no reason to
-accept it.**
+UptimeBond is an on-chain SLA escrow that adjudicates itself.
 
-- **Who ran it?** If the provider runs the model, the customer has no reason to
-  trust the output. Reverse it and the provider doesn't either.
-- **Was that really the answer?** A single API call is unverifiable after the
-  fact. Nothing stops the operator from re-rolling until they like the result,
-  or quietly editing the prompt.
-- **Models are non-deterministic.** The same prompt can produce different
-  answers. Without a mechanism that forces independent agreement, "the AI said
-  so" is just one party's assertion with extra steps.
-- **Who moves the money?** Even a correct ruling needs an escrow that pays out
-  without either party's cooperation.
+1. **An immutable agreement is created.** The customer deploys an intelligent
+   contract naming the provider, the settlement terms and the evidence. None of
+   it can be edited afterwards.
+2. **Testnet GEN is held in escrow.** The contract itself custodies the payment.
+   Neither party — and no operator — can move it outside the settlement rules.
+3. **Four public evidence sources are pinned at construction.** Commit-pinned
+   URLs, fixed forever, agreed by both parties before the provider accepts.
+4. **Either party can open a dispute** over a stated incident window.
+5. **Every validator independently re-fetches the evidence** and derives the
+   ruling from it. The contract does not distribute the evidence and does not
+   trust any one reader of it.
+6. **The ruling maps to a fixed payout percentage.** Validators return a
+   structured decision, never an arbitrary amount.
+7. **Funds move only at finalization.** Payouts are EVM external messages that
+   execute when the transaction finalizes, so nothing is paid on an unfinalized
+   ruling that could still be appealed.
 
-Centralized AI produces an *opinion*. Adversarial parties need a *verdict* —
-one that is reproducible, checkable, and wired directly to the funds.
+## Why GenLayer is necessary
 
-### Why adversarial parties need neutral adjudication
+This is not a normal smart contract, and it is not an oracle problem either.
 
-The customer wants a refund; the provider wants to keep the payment. Neither can
-be trusted with the ruling, the evidence, or the escrow. The adjudicator must be
-disinterested, its inputs must be immutable, and its output must be
-independently reproducible — otherwise the whole thing collapses back into
-"whoever controls the infrastructure wins".
+**The input is a semantic judgement over public documents.** "Was 99.1% uptime
+a breach of a 99.5% commitment, given a maintenance window announced 2 hours
+ahead of a clause requiring 24?" A conventional contract cannot read an SLA. An
+oracle can deliver a number but cannot interpret a clause.
 
-### Why GenLayer is essential
+**The parties are adversarial and neither can be trusted to run the model.** If
+the provider runs the LLM, the customer has no reason to accept the output.
+Reverse it and the provider does not either. A single API call is unverifiable
+after the fact — nothing stops an operator re-rolling until they like the answer.
 
-GenLayer is the only piece here that isn't off-the-shelf. It provides:
+**Model output is non-deterministic, so ordinary consensus cannot settle it.**
+Two honest validators asked the same question will word their reasoning
+differently. GenLayer's optimistic democracy takes consensus over the
+*structured decision fields* — outcome, refund bps, maintenance qualification,
+breached clause IDs — and never over the prose, which is retained as explanation
+only.
 
-- **Optimistic Democracy.** A leader proposes a ruling; validators
-  independently re-execute and vote. Agreement is required before anything
-  commits. No single party's model output is authoritative.
-- **Native non-deterministic execution.** `gl.nondet.web.get()` and
-  `gl.nondet.exec_prompt()` run *inside* consensus. The contract fetches its own
-  evidence and calls its own model — it doesn't trust an oracle to do it.
-- **Native GEN escrow.** The same system that adjudicates also custodies and
-  pays out. Payouts are EVM external messages that execute at finalization by
-  protocol behavior, so funds never move before the decision is final.
-- **Native appeals.** A disputed ruling is re-adjudicated by the protocol, not
-  by a bespoke "ask the AI again" method the contract author invented.
+**The financial consequence stays deterministic.** The validators choose among
+four outcomes. The contract, not the model, converts an outcome into a payout.
+An LLM cannot invent a percentage, name a recipient, or move value.
 
-Take GenLayer away and you need an oracle network, a separate escrow contract,
-a bespoke appeal mechanism, and a reason to believe the model output — four
-trust assumptions instead of none.
+That combination — non-deterministic reasoning reduced to a consensus-backed
+decision, then applied by deterministic on-chain logic — is what GenLayer
+provides and what nothing else in the stack does.
+
+---
+
+## Product walkthrough
+
+### 1 · Create the agreement
+
+The customer names the provider, describes the service, pins four evidence
+sources and sets the settlement terms. Each source must return HTTP 200 before
+the step will advance — an unreachable source guarantees a failed ruling later,
+so the wizard refuses to carry one forward.
+
+![Create Agreement wizard on step 3 of 6, Evidence. Four labelled sources — SLA terms (Authoritative), Independent monitor (Primary evidence), Provider status and Maintenance feed (Corroborating) — each with a commit-pinned URL. The first has been tested and shows HTTP 200 · JSON with a preview of the returned document; the other three read "Not tested yet — press Test" and the Next button is disabled](docs/assets/screenshots/02-create-evidence.png)
+
+### 2 · Fund, accept, dispute
+
+The customer funds the escrow, sends the provider an invitation link, and the
+provider accepts the SLA from their own wallet — which is the moment the
+agreement becomes binding on both sides. Either party can then open a dispute
+over a stated incident window.
+
+These three states are not shown as separate screenshots: the canonical contract
+below has already settled, and re-staging `AWAITING_FUNDING`,
+`AWAITING_PROVIDER_ACCEPTANCE` and `DISPUTED` would mean deploying another
+agreement and spending GEN. The run sheet in
+[`docs/pilot/PILOT-RUN.md`](docs/pilot/PILOT-RUN.md) documents each step, and
+the lifecycle strip in the next screenshot shows the path the live agreement
+actually took.
+
+### 3 · The settled agreement
+
+Everything below is read live from the contract at
+`0x5006115944D7F593E401239aeDb64abEF13dCc0a`. No wallet is needed to read it.
+
+![Agreement page for contract 0x5006115944D7F593E401239aeDb64abEF13dCc0a. A settlement panel reads "Partial refund", customer refund 25% (2500 bps), provider share 75%, with a Payout finalized badge and three figures: customer receives 0.0025 GEN, provider receives 0.0075 GEN, contract balance 0 GEN fully distributed. Below it the agreement details show escrow 0.01 GEN, the customer and provider addresses and the incident window, and a lifecycle strip runs Awaiting Funding, Awaiting Provider Acceptance, Active, Disputed, Ruled, Resolved with Resolved as the current step](docs/assets/screenshots/03-agreement-overview.png)
+
+### 4 · The validator ruling
+
+The decision fields consensus was taken over, plus the reasoning one validator
+wrote to explain them.
+
+![Ruling panel reading Partial refund, with customer refund 25% (2500 bps), provider share 75%, maintenance qualified "No — downtime counts in full", and breached clause SLA-1 "Uptime commitment — at least 99.50% of the service period". An expanded Validator reasoning disclosure explains that the independent monitor reported 99.1% uptime against a 99.5% commitment and that the 5-hour downtime event was announced only 2 hours ahead, failing the SLA-2 24-hour notice requirement. A footnote states that reasoning is explanatory only and consensus is taken over the decision fields](docs/assets/screenshots/04-validator-ruling.png)
+
+### 5 · Settlement
+
+Payout completion is derived from the contract's live native balance, never from
+its status. `RESOLVED` means the transfer was queued; only the balance reaching
+zero proves anyone was paid.
+
+![Settlement panel headed Partial refund with a Payout finalized badge. Customer receives 0.0025 GEN (25% of escrow), provider receives 0.0075 GEN (75% of escrow), contract balance 0 GEN marked fully distributed. A footnote reads: payout confirmed on-chain, the contract balance has reached zero, and amounts are the gross escrow transfer before each party's own gas](docs/assets/screenshots/05-settlement-complete.png)
+
+### 6 · Evidence, fixed forever
+
+![Evidence sources panel explaining that sources are fixed at construction and never editable, that UptimeBond does not monitor the service, and that every validator re-fetches these sources independently during adjudication. Four entries are listed: Independent monitor tagged Primary evidence, Maintenance feed and Provider status tagged Corroborating, and SLA terms tagged Authoritative clauses](docs/assets/screenshots/06-evidence-sources.png)
+
+---
+
+## Lifecycle
+
+```
+AWAITING_FUNDING
+      │  fund()                       customer transfers the escrow
+      ▼
+AWAITING_PROVIDER_ACCEPTANCE
+      │  accept_sla()                 provider commits to the pinned terms
+      │  cancel_before_acceptance()   customer withdraws, full refund ──► RESOLVED
+      ▼
+ACTIVE
+      │  approve_service()            customer confirms no breach ────────► RESOLVED
+      │  open_dispute(window)         either party, requires a window
+      ▼
+DISPUTED
+      │  rule()                       validators re-fetch and adjudicate
+      ▼
+RULED
+      │  release()                    settles per the ruling, single-shot
+      ▼
+RESOLVED
+```
+
+**The insufficient-evidence branch.** If the validators cannot support a
+financial ruling they return `INSUFFICIENT_EVIDENCE`, and `release()`
+deliberately reverts — there is no automatic settlement to apply, and inventing
+one would be worse than stopping. The escrow stays custodied while three exits
+remain open:
+
+- **Mutual settlement.** Either party proposes a refund split; the counterparty
+  accepts. The proposer cannot accept their own proposal.
+- **Native appeal.** GenLayer's transaction appeal re-adjudicates the `rule`
+  transaction. There is no custom AI re-ruling method.
+- **Deadlock fallback.** After a deadline fixed at construction,
+  `resolve_deadlock()` settles at a pre-agreed split so the escrow can always be
+  freed without an off-chain coordinator.
+
+## Ruling model
+
+Validators choose one of exactly four outcomes. The contract owns the map from
+outcome to money:
+
+| Outcome | Customer | Provider | Settles automatically |
+|---|---|---|---|
+| `NO_BREACH` | 0% | 100% | yes |
+| `PARTIAL_REFUND` | 25% (2500 bps) | 75% | yes |
+| `FULL_REFUND` | 100% | 0% | yes |
+| `INSUFFICIENT_EVIDENCE` | — | — | **no** — escrow stays custodied |
+
+**Validators do not invent payout percentages.** They cannot name a recipient,
+choose an amount, or move value. The percentages above are constants in
+`contracts/uptime_bond.py`; the model's only financial influence is selecting
+which of the four rows applies. Prompt content that tries to instruct a payout
+has nowhere to land.
+
+## Evidence model
+
+Four public URLs, pinned at construction and immutable thereafter:
+
+| Source | Role in adjudication |
+|---|---|
+| **SLA terms** | The authoritative clauses. What the provider is actually held to. |
+| **Independent monitor report** | Primary operational evidence. UptimeBond does not monitor anything itself. |
+| **Provider status record** | Corroborating. The provider's own account of the period. |
+| **Maintenance announcements** | Corroborating. Decides whether downtime qualifies for exclusion. |
+
+Two properties matter more than the list:
+
+**The contract never distributes the evidence.** Each validator fetches every
+URL itself during adjudication and re-derives the ruling. A leader cannot feed
+its peers a convenient copy.
+
+**URLs should be commit-pinned.** A source that changes between the leader's
+fetch and a validator's makes honest validators disagree. The create wizard
+warns when a URL looks mutable, and the pilot used sources pinned to a git
+commit.
+
+---
+
+## Verified Bradbury pilot
+
+A fresh agreement, deployed from the browser and driven end to end on
+**2026-07-29** by two independent wallets in two browser profiles. No scripts.
+
+**Contract:** [`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a)
+
+| # | Method | Signer | Transaction | Validators | Execution |
+|---|---|---|---|---|---|
+| 1 | `deploy` | customer | [`0x8a8befa0…dafbafcc`](https://explorer-bradbury.genlayer.com/tx/0x8a8befa0332b4c73ac2ab09fb655fe9f38e1569b00130c99129c7930dafbafcc) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 2 | `fund` · 0.01 GEN | customer | [`0xd95dce3c…e35e056672`](https://explorer-bradbury.genlayer.com/tx/0xd95dce3cec29a55ccd6821fde43e3b43f22d239b06bcec09563449e35e056672) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 3 | `accept_sla` | provider | [`0x47f95e8f…1695a82e`](https://explorer-bradbury.genlayer.com/tx/0x47f95e8f9956ae99ee7154059ac86aa5dfa5f4882561d27b1dcf85cc1695a82e) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 4 | `open_dispute` | customer | [`0xab3cfd69…fab6cad9`](https://explorer-bradbury.genlayer.com/tx/0xab3cfd69cfcf553f5f61628aeb1f76f6694bbcc7a5e56833027cfb68fab6cad9) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 5 | `rule` | customer | [`0xb151be00…cb282ae4`](https://explorer-bradbury.genlayer.com/tx/0xb151be00c6f1802d513afef8733ed7eb5a33ce14c8dea49f109f53b8cb282ae4) | 3 AGREE, 2 TIMEOUT | `FINISHED_WITH_RETURN` |
+| 6 | `release` | customer | [`0xbd6922e8…56a4ed3f`](https://explorer-bradbury.genlayer.com/tx/0xbd6922e842d468b3bd1623c889bac282a1b843b36b5af8e57f211aef56a4ed3f) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 7 | `release` — **duplicate, rejected** | provider | [`0x7f9aad2f…df83da10`](https://explorer-bradbury.genlayer.com/tx/0x7f9aad2fd451e35a8f726d27f86ca61506c4745d6f9faddcd5e94b9fdf83da10) | **5 DISAGREE** | **`FINISHED_WITH_ERROR`** |
+
+**Verified result** — read back from the contract, not inferred from status:
+
+| | |
+|---|---|
+| Escrow | **0.01 GEN** |
+| Outcome | **`PARTIAL_REFUND`**, 2500 bps, breached `SLA-1`, maintenance not qualified |
+| Customer received | **0.0025 GEN** (25%) |
+| Provider received | **0.0075 GEN** (75%) |
+| Final contract balance | **0** |
+| `payout_complete` | **`true`** |
+| Deployed source | 33,517 bytes, `04fe3a7b…` — byte-identical to `contracts/uptime_bond.py` |
+
+### The rejected duplicate release
+
+Row 7 was not planned, and it is the most useful row in the table.
+
+Twenty-seven seconds after the customer created the release, the provider
+created a second one. **This was a competing transaction submitted while the
+first release was still unfinalized** — Bradbury queued it in the next slot, and
+by the time it executed the agreement had reached `RESOLVED`. The single-shot
+guard refused it: 5/5 DISAGREE, `FINISHED_WITH_ERROR`, **no state change and no
+additional funds moved.** The settlement on-chain is the first release,
+unchanged, and the balance is zero.
+
+**The frontend could not have prevented this.** At the moment of submission the
+contract genuinely still read `RULED`, because an in-flight transaction is
+invisible in contract state, and the two parties were in separate browser
+profiles with no shared local state to compare. Commit `0505189` hardened the UI
+against acting on state it has not re-read, and that is worth having — but it
+closes the case where state has *already* moved, not this race. Two parties can
+always submit competing writes inside one finality window. Only the contract can
+arbitrate that, and it did.
+
+Full analysis: finding **F2** in
+[`docs/pilot/runs/2026-07-29-pilot.md`](docs/pilot/runs/2026-07-29-pilot.md).
+
+### Earlier verified agreements
+
+Four scripted agreements from July 2026, each driven
+`deploy → fund → accept → dispute → rule → release` with escrow movement
+measured across the release finalization boundary:
+
+| Case | Outcome | Contract | Measured settlement |
+|---|---|---|---|
+| 001-v2 | `NO_BREACH` | [`0xa0c10C65…E2cFFe`](https://explorer-bradbury.genlayer.com/address/0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe) | provider 0.1 GEN, balance 0 |
+| 002-v2 | `PARTIAL_REFUND` | [`0x965C9B45…1750d5`](https://explorer-bradbury.genlayer.com/address/0x965C9B454867273F612BD48d181Ec418391750d5) | customer 0.025, provider 0.075, balance 0 |
+| 003-v2 | `FULL_REFUND` | [`0xDF1A19AC…2f4676`](https://explorer-bradbury.genlayer.com/address/0xDF1A19ACBE068373f067EF6E226EE564032f4676) | customer 0.1 GEN, balance 0 |
+| 004-v2 | `INSUFFICIENT_EVIDENCE` | [`0x44DF7689…785F7d`](https://explorer-bradbury.genlayer.com/address/0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d) | `release()` **rejected**, 0.1 GEN custodied by design |
+
+> **⚠️ Do not fund these deprecated contracts.** Four agreements deployed before
+> commit `6e29b67` carry a broken payout path that reported success while moving
+> nothing, and `release()` is single-shot, so their escrow **cannot be
+> recovered**: `0x4dc6b188…`, `0x7EA49E78…`, `0xE64Dcc5E…`, `0xb0C263bE…` —
+> **1.3 GEN** of testnet funds permanently stranded. A separate ghost contract,
+> `0xB82f7095…`, was produced by a pre-`ad00182` constructor bug. Never fund or
+> interact with any of them.
 
 ---
 
 ## Architecture
 
-```
-   Customer ──fund()──┐                      ┌── evidence sources (untrusted, immutable URLs)
-                      ▼                      │      · SLA terms          (authoritative clauses)
-             ┌──────────────────┐            │      · independent monitor (PRIMARY)
-             │   UptimeBond     │            │      · provider status     (corroborating)
-             │   (GenLayer)     │            │      · maintenance feed    (corroborating)
-             │                  │            │
-             │  escrow custody  │            ▼
-             │  lifecycle state │   ┌──────────────────────────┐
-             │  ruling record   │◄──│  rule() — run_nondet     │
-             │  settlement      │   │  leader derives ruling   │
-             └──────────────────┘   │  EVERY validator         │
-                      ▲             │  re-fetches + re-derives │
-   Provider ──accept──┘             │  agreement on DECISION   │
-                                    │  FIELDS ONLY             │
-                                    └──────────────────────────┘
-```
+```mermaid
+flowchart TB
+    subgraph parties["Parties"]
+        CW["Customer wallet"]
+        PW["Provider wallet"]
+    end
 
-### Consensus boundary
+    FE["UptimeBond frontend<br/>React + genlayer-js 1.1.8<br/>read-only without a wallet"]
 
-| Layer | Owns | Never does |
-|---|---|---|
-| **Off-chain (frontend, scripts)** | UI, previews, indexing, transaction submission | Decide anything |
-| **Contract** | Escrow custody, lifecycle transitions, the validator agreement rule, settlement | Trust evidence blindly |
-| **Evidence sources** | Raw SLA terms and uptime facts | Are assumed honest |
+    SC["UptimeBond intelligent contract<br/>escrow · state machine · payout map"]
 
-Consensus is taken over **decision fields only**: `outcome`, `refund_bps`,
-`maintenance_qualified`, and `breached_clause_ids`. The `ruling_reason` prose is
-explanatory and is deliberately excluded — two honest validators will never
-phrase a rationale identically, so comparing prose would break consensus for no
-benefit.
+    subgraph ev["Public evidence, pinned at construction"]
+        E1["SLA terms"]
+        E2["Independent monitor"]
+        E3["Provider status"]
+        E4["Maintenance feed"]
+    end
 
-### Contract lifecycle
+    VAL["GenLayer validators<br/>each re-fetches every source<br/>and re-derives the ruling"]
+    CON["Consensus over decision fields<br/>outcome · refund bps · maintenance · clauses"]
+    SET["Deterministic settlement<br/>outcome to fixed percentage"]
 
-```
-AWAITING_FUNDING ──fund()──► AWAITING_PROVIDER_ACCEPTANCE ──accept_sla()──► ACTIVE
-        │                              │                                      │
-        │                     cancel_before_acceptance()          approve_service() ──► RESOLVED
-        │                              ▼                                      │
-        │                          RESOLVED                          open_dispute()
-        │                                                                     ▼
-        └──────────────────────────────────────────────────────────────► DISPUTED
-                                                                              │
-                                                                           rule()
-                                                                              ▼
-                                                                            RULED
-                                                        ┌─────────────────────┼──────────────────┐
-                                            settleable outcome      INSUFFICIENT_EVIDENCE   deadline passes
-                                                  release()          propose/accept mutual   resolve_deadlock()
-                                                     ▼                        ▼                    ▼
-                                                  RESOLVED               RESOLVED             RESOLVED
+    CW -->|"deploy · fund · dispute · rule · release"| FE
+    PW -->|"accept SLA · dispute · release"| FE
+    FE -->|"signed transactions"| SC
+    FE -->|"live reads: state, settlement, deadlock"| SC
+    SC --> VAL
+    VAL -->|"HTTP GET"| ev
+    VAL --> CON
+    CON --> SET
+    SET -->|"EVM external message at finalization"| CW
+    SET -->|"EVM external message at finalization"| PW
 ```
 
-15 public methods: 5 view, 10 write.
+The contract is a single GenLayer intelligent contract in
+[`contracts/uptime_bond.py`](contracts/uptime_bond.py). The frontend holds no
+keys, no server and no database — the chain is the source of truth, and the only
+local state is a browser-side index of which agreements to show.
 
-### Evidence model
+## Security and safety properties
 
-Evidence URLs are **fixed at construction and never editable**. They are
-**commit-pinned** raw GitHub URLs — never branch URLs — because every validator
-re-fetches independently, and a source that moved between the leader's fetch and
-a validator's would cause spurious disagreement rather than a real one.
-
-`_fetch` classifies every HTTP outcome, and the classification decides whether a
-ruling is even possible:
-
-| Response | Treated as | Effect |
-|---|---|---|
-| 200 | `AVAILABLE` | Used as evidence |
-| 404, 410 | `MISSING` | May yield INSUFFICIENT_EVIDENCE |
-| 401, 403 | `INACCESSIBLE` | May yield INSUFFICIENT_EVIDENCE |
-| 408, 425, 429, 5xx, timeout | `[TRANSIENT]` | Raises — validator disagrees, never settles |
-| other 4xx | `[INVALID_EVIDENCE]` | Raises — validator disagrees |
-
-A transient blip must never bank a ruling, so it forces disagreement instead.
-
-### Payout model
-
-Refunds are **derived from the outcome**, never taken from the model:
-
-| Outcome | `refund_bps` | Customer | Provider |
-|---|---|---|---|
-| `NO_BREACH` | 0 | 0% | 100% |
-| `PARTIAL_REFUND` | 2500 | 25% | 75% |
-| `FULL_REFUND` | 10000 | 100% | 0% |
-| `INSUFFICIENT_EVIDENCE` | 0 | — | — (no automatic settlement) |
-
-If the model could set the payout, a prompt injection in an untrusted evidence
-source could move the escrow. It can't: the model chooses a label, and the
-contract maps that label to a number. This is regression-tested.
-
-Settlement floors the customer refund and gives the provider the exact
-remainder, so the two always sum back to the escrow with no leakage regardless
-of divisibility.
-
-Both parties are externally owned accounts, so each payout leaves the contract
-through an **EVM external message** (`@gl.evm.contract_interface` →
-`emit_transfer`), which executes at **finalization** — not the internal GenVM
-contract-message path, which is inert against an EOA and moves no value. A
-settled agreement therefore reads `RESOLVED` with the payout *queued* for a few
-minutes to tens of minutes before the escrow actually leaves; `get_settlement_status`
-reports `payout_complete` from the live contract balance, never from status
-alone. This distinction is the fix in commit `6e29b67`; the earlier
-implementation is documented in
-[`deploy/bradbury/probe-eoa-transfer/RESULT.md`](deploy/bradbury/probe-eoa-transfer/RESULT.md).
-
-### Appeals and finality
-
-There is **no custom AI re-ruling method**. Parties use GenLayer's native
-transaction appeal to re-adjudicate the `rule` transaction. Every settlement is
-paid by EVM external messages that execute at finalization by protocol behavior
-(the proxy's `emit_transfer` takes only `value=…`; there is no `on` parameter),
-so funds never move before the accepted decision is final — which is exactly
-what makes the appeal path safe.
-
-### Deadlock handling
-
-Two deterministic liveness fallbacks guarantee the escrow can always be freed
-without an off-chain coordinator, both gated on the deterministic transaction
-timestamp (never block height, which GenLayer does not expose in-contract):
-
-- **Branch A** — a dispute that adjudication never resolves.
-- **Branch B** — an `INSUFFICIENT_EVIDENCE` ruling with no mutual settlement.
-
-Both settle at the immutable `deadlock_refund_bps` agreed up front. Without
-these, `INSUFFICIENT_EVIDENCE` would strand the escrow permanently.
-
----
-
-## Test strategy
-
-Two layers, deliberately different in what they can prove.
-
-**Direct Mode — 201 tests, ~30s, no network.** Hermetic, mocks evidence and LLM
-responses inline, runs the leader function only. This is where exhaustive
-coverage lives: state transitions, access control, exact wei accounting, HTTP
-classification, malformed model output, and the validator agreement rule via
-replayed validator closures.
-
-The suite is **mutation-verified** — I injected realistic bugs and confirmed
-they fail:
-
-| Injected bug | Tests that caught it |
+| Property | How it is enforced |
 |---|---|
-| Payout leakage (floor both legs) | 1 |
-| Dispute deadline off-by-one | 1 |
-| Consensus ignores `maintenance_qualified` | 1 |
-| Clause IDs left unsorted | 1 |
-| `release` skips the settleable check | 1 |
-| Model-supplied `refund_bps` trusted | 6 |
-| Constructor double-conversion (the Bradbury bug) | **186 of 201** |
+| **Immutable evidence URLs** | Fixed in the constructor; no method can change them. Both parties see them before acceptance. |
+| **Exact role checks** | Every state-changing method asserts the caller is the registered customer or provider. The UI derives roles from live contract state, never from local metadata. |
+| **No arbitrary payout generation** | Validators return one of four outcomes; the contract converts an outcome to a percentage. Model output cannot name an amount or a recipient. |
+| **Finalization-aware tracking** | A transaction hash is reported as *submitted*, never as success. Consensus ACCEPTED with `FINISHED_WITH_ERROR` renders as a failure, and an unreadable status renders as "outcome unknown — do not retry". |
+| **Live postcondition verification** | After a write finalizes, the app re-reads the chain and asserts the intended state change actually happened. Each postcondition is bound to the transaction hash and method that produced it. |
+| **Single-shot settlement** | `release()` can succeed once. A duplicate reverts with no state change — exercised live twice, scripted and unplanned. |
+| **Failed-deployment verification** | 13 checks run before a deployment is called deployed, including reading the contract back and matching its source hash. Fund, Invite and Save are withheld until they pass. |
+| **Stale-state protection** | Action availability is re-derived from a fresh read before a confirmation dialog opens and again immediately before a write is submitted; a status seen by another tab withdraws the action at once. |
+| **Zero-value funding prevention** | `fund` is never offered without a known positive amount, so a payable call cannot be sent for 0 and appear to have worked. |
+| **No private-key handling** | No key, seed or password is read, stored or transmitted. Signing stays in the wallet. CI scans every commit for key material. |
+| **Injection resistance** | Consensus is taken over structured decision fields only. Validator prose is displayed as explanation and never parsed for financial meaning. |
 
-**Live Bradbury** — real validators, real GEN, real evidence over HTTP. Slow
-(~30 min per transaction) and therefore narrow, but it is the only layer that
-proves the model actually reaches the right verdict against real sources.
-
-```bash
-pytest tests/direct/ -q                                   # 201 tests
-genvm-lint check contracts/uptime_bond.py                 # lint + validation
-node deploy/scripts/lifecycle.mjs --case <id> --status    # live state
-```
-
-> On Windows, `genvm-lint` needs `PYTHONIOENCODING=utf-8` — it prints `✓` and
-> crashes on a cp1252 console otherwise.
-
----
-
-## Bradbury deployments
-
-Network **GenLayer Bradbury Testnet**, chain ID **4221** ·
-[explorer](https://explorer-bradbury.genlayer.com/).
-
-Contract source: the fixed payout path at commit **`6e29b67`** (`contracts/uptime_bond.py`,
-unchanged since). Evidence sources pinned at commit **`ad00182`**. Each payout
-leaves the contract through an EVM external message that executes at
-finalization — see [Payout model](#payout-model) and
-[`deploy/bradbury/probe-eoa-transfer/RESULT.md`](deploy/bradbury/probe-eoa-transfer/RESULT.md).
-
-### Verified agreements (fixed payout path) ✓
-
-Every case below was driven `deploy → fund → accept → dispute → rule → release`
-and its escrow movement was measured on-chain across the release finalization
-boundary. Full records under `deploy/bradbury/<case>/99-final-state.json`.
-
-| Case | Outcome | Contract | Escrow settlement (measured) |
-|---|---|---|---|
-| **001-v2** no breach | `NO_BREACH` | [`0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe`](https://explorer-bradbury.genlayer.com/address/0xa0c10C656692B4A8E44357d342C38C3DEEE2cFFe) | provider received **0.1 GEN**, customer 0, **contract balance 0** |
-| **002-v2** partial refund | `PARTIAL_REFUND` 2500 bps | [`0x965C9B454867273F612BD48d181Ec418391750d5`](https://explorer-bradbury.genlayer.com/address/0x965C9B454867273F612BD48d181Ec418391750d5) | customer received **0.025 GEN**, provider received **0.075 GEN**, **contract balance 0** |
-| **003-v2** full refund | `FULL_REFUND` 10000 bps | [`0xDF1A19ACBE068373f067EF6E226EE564032f4676`](https://explorer-bradbury.genlayer.com/address/0xDF1A19ACBE068373f067EF6E226EE564032f4676) | customer received **0.1 GEN**, provider 0, **contract balance 0** |
-| **004-v2** insufficient evidence | `INSUFFICIENT_EVIDENCE` | [`0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d`](https://explorer-bradbury.genlayer.com/address/0x44DF768956c15f3B9aFBe82A08dAcB4a9A785F7d) | automatic `release()` **rejected**, **0.1 GEN remains custodied** |
-
-Each agreement was funded with **0.1 GEN**. Case 004 is the inverse gate:
-`INSUFFICIENT_EVIDENCE` has no automatic settlement, so `release()` reverts and
-the escrow stays in custody — proving the payout fix pays settleable outcomes
-without turning the unsettleable one into a payout.
-
-**Transactions** — each links to its full transaction on the Bradbury explorer:
-
-| Case | Deploy tx | Ruling tx | Release tx |
-|---|---|---|---|
-| 001-v2 | [`0x846a227db36d4e3e87199aa1bafebcb09b0bfb056be6f7a3939dcfe2805129a3`](https://explorer-bradbury.genlayer.com/tx/0x846a227db36d4e3e87199aa1bafebcb09b0bfb056be6f7a3939dcfe2805129a3) | [`0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c`](https://explorer-bradbury.genlayer.com/tx/0x842d7544a3d0b5bd6c50acc07b54f691ab92da31c82643d3626123347047fc0c) | [`0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d`](https://explorer-bradbury.genlayer.com/tx/0x8fc3afb7829a83c689d44d417fbf4d8b28dc7231c250abd3ecd0f6d5a66b997d) |
-| 002-v2 | [`0x28215db5fd84ee69154ce6a368d8b6023cf1fb848f623e2e33139eae3bf6893c`](https://explorer-bradbury.genlayer.com/tx/0x28215db5fd84ee69154ce6a368d8b6023cf1fb848f623e2e33139eae3bf6893c) | [`0x2c0ebf63ede17d46da4566133abd9bffb8d31fd2f240549df905506ee2165e97`](https://explorer-bradbury.genlayer.com/tx/0x2c0ebf63ede17d46da4566133abd9bffb8d31fd2f240549df905506ee2165e97) | [`0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064`](https://explorer-bradbury.genlayer.com/tx/0xc3ca00fe2c4acee2b8af8d2e45fb82373e4c785965d15ee810009a2f6c79b064) |
-| 003-v2 | [`0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1`](https://explorer-bradbury.genlayer.com/tx/0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1) | [`0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae`](https://explorer-bradbury.genlayer.com/tx/0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae) | [`0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a`](https://explorer-bradbury.genlayer.com/tx/0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a) |
-| 004-v2 | [`0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945`](https://explorer-bradbury.genlayer.com/tx/0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945) | [`0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3`](https://explorer-bradbury.genlayer.com/tx/0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3) | [`0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47`](https://explorer-bradbury.genlayer.com/tx/0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47) — reverted, by design |
-
-### Live two-wallet pilot (browser, 29 July 2026) ✓
-
-The four cases above were driven by `deploy/scripts/`. This one was driven
-entirely through the deployed app at
-[uptimebond.vercel.app](https://uptimebond.vercel.app) by **two independent
-wallets** — the customer deployed, funded, disputed, ruled and released; the
-provider accepted the SLA from an invitation link.
-
-| Field | Value |
-|---|---|
-| Contract | [`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a) |
-| Customer / provider | `0x456Ccff0…` / `0x79DD8260…` |
-| Escrow | **0.01 GEN** |
-| Outcome | **`PARTIAL_REFUND`** · 2500 bps · breached `SLA-1` · maintenance not qualified |
-| Settlement | customer **0.0025 GEN** (25%), provider **0.0075 GEN** (75%), **contract balance 0**, `payout_complete: true` |
-| Deployed source | 33,517 bytes, `04fe3a7b…` — byte-identical to `contracts/uptime_bond.py`, the first deployment carrying the LF-canonical hash |
-
-| # | Method | Signer | Transaction | Consensus | Execution |
-|---|---|---|---|---|---|
-| 1 | `deploy` | customer | [`0x8a8befa0…`](https://explorer-bradbury.genlayer.com/tx/0x8a8befa0332b4c73ac2ab09fb655fe9f38e1569b00130c99129c7930dafbafcc) | 5 AGREE | `FINISHED_WITH_RETURN` |
-| 2 | `fund` (payable 0.01 GEN) | customer | [`0xd95dce3c…`](https://explorer-bradbury.genlayer.com/tx/0xd95dce3cec29a55ccd6821fde43e3b43f22d239b06bcec09563449e35e056672) | 5 AGREE | `FINISHED_WITH_RETURN` |
-| 3 | `accept_sla` | provider | [`0x47f95e8f…`](https://explorer-bradbury.genlayer.com/tx/0x47f95e8f9956ae99ee7154059ac86aa5dfa5f4882561d27b1dcf85cc1695a82e) | 5 AGREE | `FINISHED_WITH_RETURN` |
-| 4 | `open_dispute` | customer | [`0xab3cfd69…`](https://explorer-bradbury.genlayer.com/tx/0xab3cfd69cfcf553f5f61628aeb1f76f6694bbcc7a5e56833027cfb68fab6cad9) | 5 AGREE | `FINISHED_WITH_RETURN` |
-| 5 | `rule` | customer | [`0xb151be00…`](https://explorer-bradbury.genlayer.com/tx/0xb151be00c6f1802d513afef8733ed7eb5a33ce14c8dea49f109f53b8cb282ae4) | 3 AGREE, 2 TIMEOUT | `FINISHED_WITH_RETURN` |
-| 6 | `release` | customer | [`0xbd6922e8…`](https://explorer-bradbury.genlayer.com/tx/0xbd6922e842d468b3bd1623c889bac282a1b843b36b5af8e57f211aef56a4ed3f) | 5 AGREE | `FINISHED_WITH_RETURN` |
-| 7 | `release` **duplicate — rejected** | provider | [`0x7f9aad2f…`](https://explorer-bradbury.genlayer.com/tx/0x7f9aad2fd451e35a8f726d27f86ca61506c4745d6f9faddcd5e94b9fdf83da10) | **5 DISAGREE** | **`FINISHED_WITH_ERROR`** |
-
-**Row 7 is a negative safety test**, unplanned and therefore worth more than a
-scripted one. The provider submitted a second `release()` 27 seconds after the
-customer's, from a tab still showing `RULED`. Bradbury queued it in the next
-slot; by the time it executed the agreement was `RESOLVED` and the single-shot
-guard refused it. **No state changed and no additional funds moved** — the
-settlement on-chain is the first release, unchanged, and the balance is zero.
-
-The frontend was hardened in `0505189` so a tab holding state it has not re-read
-cannot carry a write to signature. That fix does not close this exact race, and
-the pilot record says so plainly: at submission the contract genuinely still read
-`RULED`, because the competing release was in flight and unfinalized. Two parties
-can always submit inside one finality window; only the contract can arbitrate it,
-and it did. Full analysis in finding **F2** of
-[`docs/pilot/runs/2026-07-29-pilot.md`](docs/pilot/runs/2026-07-29-pilot.md).
-
-Consensus notes: 002-v2 ruled and released at a clean 5/5 AGREE. 001-v2 and
-003-v2 ruled on 3/5 majorities (with 2 validator `TIMEOUT` and 2
-`DETERMINISTIC_VIOLATION` respectively) and released 5/5 AGREE — correct
-outcomes, weaker margins from validator-side re-execution under node load, not
-contract faults. 004-v2's `release()` was ACCEPTED by consensus but execution
-`FINISHED_WITH_ERROR` with 5/5 DISAGREE — the `Outcome INSUFFICIENT_EVIDENCE
-has no settlement` guard. 002-v2 also has a duplicate-release check
-([`0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649`](https://explorer-bradbury.genlayer.com/tx/0x86bf7fce249303a6794460d39783e4f12f015a50776458177df2b80caf893649))
-rejected 5/5 DISAGREE, moving no value.
-
-Case 002-v2's ruling, derived by validators from the evidence alone:
-
-> "The independent monitor is the primary evidence and reports an uptime of
-> 99.1%, which is below the 99.5% SLA commitment. The 300-minute maintenance
-> window on May 12 does not qualify for exclusion as it was announced only 2
-> hours in advance, failing the 24-hour notice requirement in SLA-2. Therefore,
-> all 402 minutes of downtime count, resulting in a breach that falls within
-> the 98.00% to 99.49% range for a partial refund per SLA-3."
-
-### ⚠️ Deprecated broken-payout deployments — do not use as demos
-
-These four contracts were deployed **before commit `6e29b67`**. Their `_settle`
-paid EOAs through an internal GenVM `PostMessage`, which is inert against an
-externally owned account: it moved no value while reporting success. The ruling
-on each is valid and consensus-backed; **only the payout is broken.** The
-contracts are immutable and `release()` is single-shot, so the escrow **cannot
-be recovered** by any further call. Do not fund them, do not call `release`
-again, and do not present them as working demonstrations.
-
-| Contract | Case | On-chain state | Escrow (stranded) |
-|---|---|---|---|
-| [`0x4dc6b188b3025f92F133515c3041cbc4E2019988`](https://explorer-bradbury.genlayer.com/address/0x4dc6b188b3025f92F133515c3041cbc4E2019988) | 002 partial refund | RESOLVED, `PARTIAL_REFUND` 2500 (paid nobody) | **1 GEN** — superseded by 002-v2 |
-| [`0x7EA49E783B4839a20c39F77FFe62b3beF10195b7`](https://explorer-bradbury.genlayer.com/address/0x7EA49E783B4839a20c39F77FFe62b3beF10195b7) | 003 full refund | RESOLVED, `FULL_REFUND` 10000 (paid nobody) | **0.1 GEN** |
-| [`0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC`](https://explorer-bradbury.genlayer.com/address/0xE64Dcc5E82592c8BBF59003eF6AF772D739dDBAC) | 001 no breach | DISPUTED (never settled) | **0.1 GEN** |
-| [`0xb0C263bEf959E640060045D47659582D23bb67c0`](https://explorer-bradbury.genlayer.com/address/0xb0C263bEf959E640060045D47659582D23bb67c0) | 004 insufficient evidence | AWAITING_PROVIDER_ACCEPTANCE (never settled) | **0.1 GEN** |
-
-Total permanently stranded: **1.3 GEN** of testnet funds. Treat as lost absent
-an official protocol recovery mechanism.
-
-**⚠️ `0xB82f70950BbEfBC6829c463A5922Bb1B6333C637` is a separate failed ghost
-contract from the pre-`ad00182` constructor bug. Never fund or interact with
-it.**
-
----
-
-## Frontend
-
-```bash
-cd frontend && npm install && npm run dev     # http://localhost:3000
-```
-
-Real dApp, not a mockup: reads come from `genlayer-js` against the live chain,
-writes go through an injected wallet. Read-only without a wallet.
-
-The rule the UI enforces everywhere: **a transaction hash is not success.** The
-tracker moves through distinct, named phases — awaiting signature → submitted →
-pending consensus → consensus accepted → finalized — and a consensus-ACCEPTED
-transaction whose execution was `FINISHED_WITH_ERROR` renders as a **failure**.
-An unreadable status renders as "outcome unknown — do not retry before
-confirming on-chain state".
-
-Covers role detection (customer/provider/observer by address), chain detection
-with a switch prompt, commit-pinned evidence links, ruling presentation,
-deadlock deadlines, the insufficient-evidence path, and appeal/finality.
-
-```bash
-npm run lint && npm run typecheck && npm test && npm run build
-```
-
----
-
-## Demo walkthrough
-
-1. `npm run dev`, open `http://localhost:3000` — case 002 loads by default with
-   live state read from Bradbury.
-2. Read the **Evidence** panel and open a source. Note the URL is pinned to a
-   commit hash.
-3. Read the **Ruling** panel: `PARTIAL_REFUND`, 25% refund, maintenance not
-   qualified, and the validators' reasoning.
-4. Switch cases in the top nav to see the other three agreements.
-5. Connect a wallet as the customer or provider to act; as any other address the
-   UI shows the observer role and disables the actions.
-
----
+Detail: [`docs/pilot/PILOT.md`](docs/pilot/PILOT.md) and the incident write-ups
+under [`docs/incidents/`](docs/incidents/).
 
 ## Repository structure
 
+| Path | Contents |
+|---|---|
+| [`contracts/`](contracts/) | The GenLayer intelligent contract — escrow, state machine, adjudication prompt and the fixed payout map. One file, `uptime_bond.py`, plus probes. |
+| [`frontend/`](frontend/) | The React dApp deployed at uptimebond.vercel.app. Reads through `genlayer-js`, writes through an injected wallet, plus the browser e2e, accessibility and reproducibility gates in `frontend/e2e/`. |
+| [`evidence/`](evidence/) | The four public evidence fixtures per demo case, served from GitHub raw at a pinned commit. Fabricated services — never cite them as real reliability data. |
+| [`tests/`](tests/) | `tests/direct/` runs the contract in GenLayer Direct Mode (fast, offline, 201 tests). `tests/integration/` hits live Bradbury and is opt-in. |
+| [`deploy/`](deploy/) | The Bradbury harness: `scripts/` drives deployment and full lifecycles with receipt classification and resume; `bradbury/` holds the per-case transaction records. |
+| [`docs/`](docs/) | Pilot run sheet and completed run record, submission package, incident investigations, and the screenshots used above. |
+
+## Local development
+
+### Frontend
+
+```bash
+cd frontend
+npm ci
+npm run dev            # http://localhost:3000
 ```
-contracts/uptime_bond.py     the intelligent contract (749 lines)
-contracts/probes/            eoa_transfer_probe.py — the live EOA-payout probe
-evidence/                    four commit-pinned fixture cases + schema
-tests/direct/                201 hermetic Direct Mode tests
-tests/integration/           live Bradbury balance checks (opt-in: -m integration)
-deploy/scripts/              gl.mjs (tx driver), lifecycle.mjs (harness), lib.mjs, balances.mjs
-deploy/bradbury/             deployment + transaction records per case
-frontend/                    React/TS/Vite dApp on port 3000
+
+No environment variables are required. The chain, RPC and explorer endpoints are
+compiled in, and the app is fully usable read-only without a wallet.
+
+Gates, all runnable locally:
+
+```bash
+npm run lint           # eslint, zero warnings tolerated
+npm run typecheck      # tsc --noEmit
+npm test               # vitest, 159 unit tests
+npm run build          # tsc -b && vite build
+npm run repro          # SDK pinning + contract source parity, 13 checks
 ```
 
----
+Browser gates need a server on port 3000 (`npm run dev` in another shell):
 
-## Security assumptions
+```bash
+npm run e2e            # smoke suite with a mocked wallet, no GEN spent
+npm run e2e:encoding   # deploy calldata encoding, no GEN spent
+npm run a11y           # axe-core, WCAG 2.1 AA, every route at two viewports
+npm run shots          # console errors, failed requests, overflow, target size
+```
 
-- **Evidence sources are untrusted but assumed available.** The contract cannot
-  tell a genuinely-missing source from a censored one; it refuses to rule rather
-  than guess.
-- **Prompt injection is contained, not prevented.** A malicious evidence source
-  could influence the *outcome label*, but cannot set the payout — refund basis
-  points are derived from the label by the contract. The blast radius is
-  bounded by the outcome schedule.
-- **GitHub is a availability dependency.** Commit-pinning makes content
-  immutable, but if raw.githubusercontent.com is down, `rule()` fails transiently
-  and validators disagree rather than settling wrongly. Production use should
-  prefer content-addressed storage.
-- **The deploying key is the customer.** `gl.message.sender_address` becomes the
-  customer, so deploying on someone's behalf with an operator key records the
-  *operator* as the customer.
-- **Validator honesty is GenLayer's assumption, not ours.** UptimeBond inherits
-  whatever guarantees the network provides.
+### Contract
 
----
+The Direct Mode suite runs the contract in-process — no node, no network, no
+keys:
+
+```bash
+pip install genlayer-test        # verified against 0.29.2
+python -m pytest tests/direct -q # 201 tests
+```
+
+The integration suite is excluded by default because it hits live Bradbury and
+is slow. Run it deliberately:
+
+```bash
+python -m pytest tests/integration -m integration
+```
+
+## Testing
+
+| Suite | Result | What it covers |
+|---|---|---|
+| Contract Direct Mode | **201 passed** | State machine, role gates, payout arithmetic, deadlock timing, mutual settlement, injection resistance |
+| Frontend unit | **159 passed** | Action availability, postconditions, transaction classification, registry migration, deployment verification, stale-state guards |
+| Browser smoke | **17/17** | Landing, wallet connect, role detection, the create wizard, wrong-network banner, import validation, 404 — mocked wallet, no GEN spent |
+| Deploy calldata encoding | **11/11** | The `provider` argument reaches the wire as 20 raw Address bytes, never a 42-character string |
+| Accessibility | **0 axe violations** | WCAG 2.1 AA across 11 routes at desktop and mobile, plus structural checks axe cannot make |
+| Visual sweep | **0 problems** | Console errors, failed requests, horizontal overflow, and targets under the 24px WCAG 2.5.8 minimum |
+| Reproducibility | **13/13** | Exactly one lockfile-pinned `genlayer-js`, a shared `CalldataAddress` class across browser and scripts, and the embedded contract source byte-identical to `contracts/uptime_bond.py` with no CRLF |
+| Secret scan | clean | Key material and recovery phrases, every push |
+
+Every suite above runs in
+[CI](https://github.com/GIFTEDLOV/uptimebond/actions/workflows/ci.yml) on each
+push and pull request to `main`.
 
 ## Known limitations
 
-Stated plainly rather than glossed:
-
-- **All four cases are settled and verified on the fixed payout path.** Escrow
-  movement was measured on-chain across each release finalization (records under
-  `deploy/bradbury/<case>-v2/99-final-state.json`):
-  - **001-v2 `NO_BREACH`** — provider received **0.1 GEN**, contract balance **zero**.
-  - **002-v2 `PARTIAL_REFUND`** — customer received **0.025 GEN**, provider **0.075 GEN**, contract balance **zero**.
-  - **003-v2 `FULL_REFUND`** — customer received **0.1 GEN**, contract balance **zero**.
-  - **004-v2 `INSUFFICIENT_EVIDENCE`** — automatic `release()` **rejected** (5/5 DISAGREE), **0.1 GEN remains custodied**, by design.
-- **Two rulings finalized on weaker 3/5 validator margins.** 001-v2 ruled with 2
-  validator `TIMEOUT` and 003-v2 with 2 `DETERMINISTIC_VIOLATION`, both reaching
-  the correct outcome on a 3/5 AGREE majority. That is validator-side divergence
-  under load, not a contract fault, but it is a thinner margin than 002-v2's
-  clean 5/5 and is worth watching.
-- **`get_settlement_status` reads a non-final balance.** Between a release being
-  ACCEPTED and finalizing it correctly reports `payout_complete: false`, but a
-  chain reorg before finality could still change the settled outcome. The view
-  reflects best-known, not irreversible, state.
-- **Bradbury was congested throughout and needs supervised retries.** The node
-  intermittently rejects submissions at the consensus contract (before any tx
-  hash exists, so nothing commits) and emits `l1_sender_commit` backpressure and
-  `TIMEOUT` / `DETERMINISTIC_VIOLATION` votes. Every such revert left balances
-  correct and no orphaned state, and a retry cleared it — but runs must be
-  watched, not fired and forgotten.
-- **Cases must be driven serially — one signer.** All cases sign with the same
-  customer account; running them concurrently lets a later submission land while
-  an earlier one is unfinalized and get reverted. True parallel execution would
-  need a separate signer per case. The harness README documents this.
-- **One deployment materialized nothing, and the cause is still unknown.** On
-  27 July 2026 a deployment finalized `FINISHED_WITH_RETURN` with 5/5 AGREE and
-  recorded storage changes containing the correct constructor state — and
-  `gen_getContractCode`, `gen_call get_state` (at both `latest-final` and
-  `latest-nonfinal`) and the explorer contracts endpoint all report nothing at
-  the address the receipt names, to this day. **No funds were escrowed.**
-  Deployments resumed working on 29 July and the replacement materialized
-  normally, so the incident is **closed as no longer reproducing, not
-  explained**. Treat a finalized deploy receipt as a claim to verify, never as
-  proof — which is what `verifyDeployment`'s 13 checks exist for. See
-  [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
-- **The pilot's balance evidence is on the contract side only.** The 29 July run
-  was reconstructed from the chain after the fact, so per-wallet before/after
-  balances were never captured and cannot be recovered — a signer's net is its
-  gross credit minus its own gas, and gas is not separable retrospectively. What
-  is proven is stronger for the escrow question and weaker for the wallet one:
-  the contract holds zero, `payout_complete` is `true`, and the two expected
-  shares sum to the escrow. No screenshots were taken either.
-- **Two parties can submit competing writes inside one finality window, and the
-  client cannot prevent it.** The pilot's duplicate `release()` was submitted 27
-  seconds after the first, when the contract still genuinely read `RULED`,
-  because the competing transaction was in flight and unfinalized — invisible in
-  contract state. The frontend's pre-submit re-read (`0505189`) closes the case
-  where state has *already* moved; it cannot close this one. The contract's
-  single-shot guard is what makes it harmless, and it did: 5/5 DISAGREE, no
-  state change, no funds moved.
-- **Deployed bytes were platform-dependent until `bde38c9`.** The frontend
-  submits `contracts/uptime_bond.py` verbatim, and a Windows checkout produced
-  CRLF (34,266 bytes, `93e1ddb9…`) where Linux produced LF (33,517 bytes,
-  `04fe3a7b…`) — the same commit deploying different contracts depending on who
-  built the bundle. `.gitattributes` now pins the file to LF and CI asserts it.
-  All existing deployments carry the CRLF variant; the logic is identical but
-  the bytes, transaction hash and derived address are not.
-- **SDK drift was an unpinned hazard, now closed.** Two breakages surfaced from
-  the globally-installed `genlayer-js` (a dropped `CalldataAddress` export; a
-  changed write path). Since `a93ad56` the SDK is pinned to exactly **1.1.8**,
-  browser and scripts resolve one repository-local install, and CI asserts a
-  single copy and an identical `CalldataAddress` class on both sides.
-- **Wallet deltas include gas.** A settling party that signs `rule` / `release`
-  pays that gas, so its *net* balance change is smaller than the gross transfer.
-  Payout amounts above are the gross escrow movement (contract balance to zero,
-  counterpart delta), derived by conservation, not the signer's net delta. Gas
-  and settlement must not be conflated when reading balances.
-- **Some live negative checks were run, others remain Direct-Mode only.** The
-  duplicate-release guard was exercised live **twice** — scripted on 002-v2, and
-  again unplanned in the 29 July browser pilot when the provider submitted a
-  second `release()` (5/5 DISAGREE, no state change, no funds moved) — as was the
-  `INSUFFICIENT_EVIDENCE` no-settlement guard (004-v2). The remaining
-  access-control and premature-state reverts are covered thoroughly in Direct
-  Mode but not re-run live, since each would cost a separate deployment and
-  ~30 minutes per reverting transaction.
+- **Bradbury is a testnet.** No real value, no mainnet deployment, and no claim
+  of production readiness.
+- **Finalization is slow.** Roughly 26–32 minutes per transaction, and Bradbury
+  serializes them per contract — a full six-step agreement is a ~3-hour
+  exercise. The UI is built around that rather than hiding it.
+- **Adjudication depends on evidence availability.** Validators re-fetch every
+  source at ruling time. A source that is down, rate-limited or mutable between
+  fetches can produce `INSUFFICIENT_EVIDENCE` or make honest validators
+  disagree.
+- **Validator timeouts happen under load.** The pilot's `rule` transaction
+  reached the correct outcome on a 3/5 margin with two validators timing out.
+  Correct, but a thinner margin than the 5/5 every other transaction achieved.
+- **Parties can submit competing writes before either finalizes.** An in-flight
+  transaction is invisible in contract state, so no client can prevent it. The
+  contract's single-shot guard is what makes it harmless — the losing party pays
+  gas and waits to learn its call was refused.
+- **One deployment once materialized nothing, and the cause is unknown.** A
+  finalized, 5/5-agreed deployment left no contract at the address its receipt
+  named, and that address is still empty. Deployments resumed working and the
+  incident is **closed as no longer reproducing, not explained**. Always verify a
+  deployment by reading the contract back.
+- **The pilot's wallet-side balance deltas and screenshots were not captured.**
+  The run was reconstructed from the chain afterwards. Contract-side settlement
+  evidence is complete and independently reproducible; per-wallet net deltas are
+  not recoverable.
 - **Deadlock deadlines were not exercised in real time.** The minimum window is
-  1 hour and deployments use 24. Deterministic time progression is covered in
-  Direct Mode via `warp`. A dedicated short-window deployment would be needed to
-  demonstrate it live.
-- **The frontend is now browser-verified end to end, by the pilot itself.** The
-  29 July run was driven entirely through the deployed app by two wallets in two
-  profiles — create wizard, deploy, fund, invitation link, provider acceptance,
-  dispute, ruling, release — so every screen on the critical path was exercised
-  against a live contract. Automated checks (axe on 22 page/viewport
-  combinations, a mocked-wallet e2e suite, a visual sweep) cover the rest each
-  CI run. What is still missing is a *recorded* browser session: no screenshots
-  were captured during the pilot.
-- **The GenLayer CLI cannot call payable methods.** Both 0.39.1 and 0.39.2
-  hardcode `value: 0n`, which is why `deploy/scripts/` exists.
-- **`genlayer schema` and `genlayer code` are Studio-only.** Deployed source was
-  verified against the deployment calldata instead.
+  1 hour and deployments use 24. Time progression is covered in Direct Mode via
+  `warp`.
+- **1.3 GEN is permanently stranded** in four deprecated contracts with the
+  pre-`6e29b67` payout bug. Immutable and unrecoverable — see the warning above.
 - **Evidence fixtures are fabricated.** NimbusAPI, Acme Labs and Nimbus Systems
-  do not exist. Never cite them as real reliability data.
+  do not exist.
+- **No commercial warranty.** This is a hackathon-grade testnet project.
+
+## Documentation
+
+| Document | What it is |
+|---|---|
+| [Pilot run sheet](docs/pilot/PILOT-RUN.md) | The step-by-step procedure for a live two-wallet run |
+| [Completed pilot record](docs/pilot/runs/2026-07-29-pilot.md) | The 2026-07-29 run: transactions, votes, settlement and two findings |
+| [Pilot background kit](docs/pilot/PILOT.md) | Evidence publishing, threat considerations, options and trade-offs |
+| [Evidence record template](docs/pilot/EVIDENCE-RECORD.md) | The blank form to fill in during a run |
+| [Submission package](docs/submission/SUBMISSION.md) | Pitch, architecture summary, testing evidence and limitations |
+| [Demo script](docs/submission/DEMO-SCRIPT.md) | Shot list and narration for the walkthrough video |
+| [Materialization incident](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md) | A deployment that finalized and produced no contract — investigation and closing note |
+| [Support report](docs/incidents/GENLAYER-SUPPORT-REPORT.md) | The paste-ready version of that incident, marked superseded |
+| [Deploy harness](deploy/scripts/README.md) | Why the scripts exist and the Bradbury behaviours they handle |
+| [Evidence fixtures](evidence/README.md) | What each demo case's four sources contain |
+
+## Contributing and licence
+
+**No licence file is present in this repository, so no licence is granted.** All
+rights are reserved by default until one is added. If you want to reuse any of
+this, open an issue and ask.
+
+Issues and pull requests are welcome. CI must pass — lint, typecheck, both test
+suites, the build, the browser gates and the secret scan — and any claim added
+to the documentation should be one a reader can verify from the chain or from a
+command in this repository.

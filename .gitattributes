@@ -18,3 +18,9 @@ frontend/src/contract/uptime_bond.py text eol=lf
 # Evidence fixtures are fetched by validators over HTTPS and hashed nowhere,
 # but keeping them stable avoids noisy diffs across platforms.
 evidence/**/*.json text eol=lf
+
+# Documentation screenshots. Git detects PNGs as binary on its own, but this
+# checkout runs core.autocrlf=true, and a misdetected image would be silently
+# corrupted by line-ending translation rather than failing loudly. Stating it
+# costs nothing and removes the possibility.
+docs/assets/screenshots/*.png binary
