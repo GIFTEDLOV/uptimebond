@@ -1,8 +1,15 @@
 # Incident — a finalized deployment that produced no contract
 
-**Status:** open, unresolved. Blocks fresh self-service deployment on Bradbury.
-**Frozen at:** `11c39f9` / `v1.0.0-bradbury`
+**Status:** **closed as no longer reproducing** — deployments resumed working on
+2026-07-29 and a full pilot ran end to end on a freshly deployed contract. The
+root cause was never explained. See [section 9](#9-closing-note--deployments-resumed-2026-07-29).
 **Impact:** no funds at risk. Nothing was escrowed, nothing was lost.
+
+> Sections 1–8 are the original investigation, recorded while the incident was
+> open, and are left exactly as written. Nothing in them has been deleted or
+> revised — a later success does not make the earlier evidence wrong, and the
+> transaction that produced no contract is still on-chain and still produces no
+> contract.
 
 A contract deployment reached consensus, finalized with `FINISHED_WITH_RETURN`,
 was agreed by 5 of 5 validators, and reported storage writes containing the
@@ -293,3 +300,61 @@ curl -s https://rpc-bradbury.genlayer.com -H 'content-type: application/json' \
 
 curl -s https://explorer-bradbury.genlayer.com/api/v1/contracts/0xc09d70CE30BAd8ce8519C40Ef12C037B9cfBd99f
 ```
+
+---
+
+## 9. Closing note — deployments resumed (2026-07-29)
+
+Bradbury deployments started materializing again. A replacement deployment
+succeeded, the contract it named exists, and a complete two-wallet pilot was
+driven through it to settlement.
+
+| | |
+|---|---|
+| Replacement deployment tx | [`0x8a8befa0332b4c73ac2ab09fb655fe9f38e1569b00130c99129c7930dafbafcc`](https://explorer-bradbury.genlayer.com/tx/0x8a8befa0332b4c73ac2ab09fb655fe9f38e1569b00130c99129c7930dafbafcc) |
+| Materialized contract | [`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a) |
+| Created (UTC) | 2026-07-29 11:17:08 |
+| Sender | `0x456Ccff0d33463E1834F724C5C5971D6cff6f1dc` — the same account as the failed browser deployment |
+| Consensus / execution | FINALIZED / AGREE (5/5) · `FINISHED_WITH_RETURN` |
+| Contract code present | **yes** — 33,517 bytes, SHA-256 `04fe3a7b0b47cab5bb997bce645228e7eea10a0564ac55971753beae40c4c49f` |
+| Subsequent lifecycle | funded, accepted, disputed, ruled `PARTIAL_REFUND`, released, balance zero |
+
+The distinguishing check is the one section 4 applies to the failed address:
+`gen_getContractCode` returns the source, `get_state` answers at both
+`latest-final` and `latest-nonfinal`, and the explorer's contracts endpoint has
+the record. All of it, repeatedly, days later — and through the full lifecycle,
+which is a far stronger proof of materialization than a single read: a contract
+that does not exist cannot hold an escrow, rule on evidence, or pay it out.
+
+Full pilot record: [`../pilot/runs/2026-07-29-pilot.md`](../pilot/runs/2026-07-29-pilot.md).
+
+### What this does and does not establish
+
+**It closes the blocker.** Fresh self-service deployment works. The freeze on
+deployments is lifted, and the two-wallet pilot that could not run is done.
+
+**It does not explain the failure.** No cause was ever identified, and none of
+the evidence in sections 1–8 is retracted. Transaction
+`0x0c8e748c…` remains finalized, 5/5 agreed, with recorded storage writes and a
+non-zero `storage_proof`, and `0xc09d70CE…` remains an address with no contract
+at it. That is still true today and still unexplained.
+
+The uncertainty stated in section 5 — client versus time, confounded — resolves
+toward **time**. The replacement was sent from the same account, against the
+same chain, with the same pinned SDK, and it materialized. The client-side
+exoneration in sections 2 and 3 is therefore no longer carrying the argument
+alone. Whatever changed was node-side, and it changed without an announcement we
+saw.
+
+**One deliberate difference is recorded for completeness**, and it is a
+consequence of `bde38c9`, not a candidate cause: this deployment submitted the
+**LF-canonical 33,517-byte source (`04fe3a7b…`)**, where the failed one submitted
+the **CRLF 34,266-byte variant (`93e1ddb9…`)**. Different bytes mean a different
+payload, hash and derived address. Nothing suggests line endings had anything to
+do with materialization — the eight scripted deployments that *worked* in July
+also carried the CRLF variant, which rules it out as the discriminator.
+
+**Recommendation unchanged:** verify a deployment by reading the contract back
+before treating it as real. `verifyDeployment`'s 13 checks (section 7) are what
+make the difference between these two transactions visible to a user in seconds
+rather than after an escrow has been sent.

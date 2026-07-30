@@ -1,7 +1,17 @@
 # Live pilot evidence record
 
+> **A completed run exists:**
+> [`runs/2026-07-29-pilot.md`](runs/2026-07-29-pilot.md) — contract
+> `0x5006115944D7F593E401239aeDb64abEF13dCc0a`, `PARTIAL_REFUND` 2500 bps,
+> escrow settled 0.0025 / 0.0075 GEN, contract balance zero, plus a duplicate
+> `release()` the contract refused. This file remains the blank template.
+
 Copy this file to `docs/pilot/runs/<YYYY-MM-DD>-pilot.md` and fill it in as the
 run proceeds — not afterwards from memory. Every `__________` is a blank.
+
+The 2026-07-29 run was reconstructed from the chain afterwards, which is why its
+per-wallet balance deltas and screenshots are missing. Fill this in *as you go*
+and you will have both.
 
 Record what actually happened, including retries and failures. A run that hit
 two node retries and says so is stronger evidence than one that claims to have

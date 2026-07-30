@@ -1,5 +1,16 @@
 # Live pilot run sheet — browser only, two wallets, 0.01 GEN
 
+> **This run sheet has been executed successfully.** 2026-07-29, contract
+> [`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a):
+> ruled `PARTIAL_REFUND` 2500 bps, escrow settled 0.0025 GEN to the customer and
+> 0.0075 GEN to the provider, contract balance zero. Full record:
+> [`runs/2026-07-29-pilot.md`](runs/2026-07-29-pilot.md).
+>
+> Two things that run learned, worth knowing before you repeat it: record the
+> wallet balances at step 0 *as you go* (they cannot be recovered afterwards),
+> and see finding **F2** — two parties can both submit `release()` inside one
+> finality window, and only the contract can arbitrate that.
+
 The exact sequence for one real end-to-end agreement on GenLayer Bradbury,
 driven entirely through **[uptimebond.vercel.app](https://uptimebond.vercel.app)**.
 No scripts, no CLI, no keys on disk.

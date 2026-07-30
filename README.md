@@ -8,21 +8,29 @@ and no off-chain coordinator.
 
 Live on GenLayer Bradbury Testnet. Contract source: [`contracts/uptime_bond.py`](contracts/uptime_bond.py).
 
-> **Status — frozen at `v1.0.0-bradbury` (`11c39f9`).**
-> The contract, the frontend and the tooling are production-grade for Bradbury,
-> and the **four v2 agreements below remain deployed, settled and verified
-> on-chain**.
+> **Status — live two-wallet pilot complete ✓**
 >
-> **Fresh self-service deployment is currently blocked.** A deployment on
-> 27 July 2026 finalized with `FINISHED_WITH_RETURN`, 5/5 validators agreeing
-> and storage writes recorded, yet no contract exists at the address its receipt
-> named. Every byte the client controls was compared against a deployment that
-> worked and they are equivalent, so this looks node-side. **No funds were at
-> risk — deployment moves no value and nothing was escrowed.** Details:
+> A fresh agreement was deployed from the browser on **29 July 2026** and driven
+> end to end by two separate wallets: **[`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a)**.
+> Escrow **0.01 GEN** funded, SLA accepted, dispute opened, validators ruled
+> **`PARTIAL_REFUND` (2500 bps)** from the evidence alone, settlement released —
+> **customer 25% (0.0025 GEN), provider 75% (0.0075 GEN), contract balance zero.**
+> The four v2 agreements below also remain deployed, settled and verified.
+>
+> The provider then submitted a **duplicate `release()` from a stale tab**. The
+> contract refused it — 5/5 DISAGREE, `FINISHED_WITH_ERROR`, **no state change
+> and no additional funds moved**. An unplanned negative test that the
+> single-shot guard passed.
+>
+> Full record: [`docs/pilot/runs/2026-07-29-pilot.md`](docs/pilot/runs/2026-07-29-pilot.md).
+> The frontend was hardened in `0505189` so a tab holding stale state cannot
+> carry a write to signature and postconditions cannot be misattributed across
+> transactions.
+>
+> The earlier **materialization incident is closed as no longer reproducing** —
+> deployments resumed working and the replacement deployment materialized
+> normally. The cause was never explained and the original evidence stands:
 > [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
->
-> A fresh end-to-end two-wallet pilot is therefore **prepared but not
-> completed**. Further deployments are frozen pending a GenLayer answer.
 
 ---
 
@@ -299,6 +307,48 @@ without turning the unsettleable one into a payout.
 | 003-v2 | [`0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1`](https://explorer-bradbury.genlayer.com/tx/0x8114096c8d571b0ef7a71eebca3cf128383e8e9cf145032d8727a868df9580d1) | [`0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae`](https://explorer-bradbury.genlayer.com/tx/0xff60eb612533ebe10c11dfd826e946073ecd011bd21e47f134408031c73838ae) | [`0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a`](https://explorer-bradbury.genlayer.com/tx/0x34789e5edd99cec68b53a3c96552ab09d703457be3abae5dfcb3938f63f18e4a) |
 | 004-v2 | [`0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945`](https://explorer-bradbury.genlayer.com/tx/0x0e11d6a815b77709a384f18e52c72628c17d585d5bfc797886786d1e1c781945) | [`0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3`](https://explorer-bradbury.genlayer.com/tx/0xd5a73921c5807481e4e20688d2b19b7b62f4b112fa89cbe8dbfbbe83173768e3) | [`0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47`](https://explorer-bradbury.genlayer.com/tx/0xeef01ac7ace209fab1c635a5c9ffc8255981afb2f18b564ae982acc2be79fe47) — reverted, by design |
 
+### Live two-wallet pilot (browser, 29 July 2026) ✓
+
+The four cases above were driven by `deploy/scripts/`. This one was driven
+entirely through the deployed app at
+[uptimebond.vercel.app](https://uptimebond.vercel.app) by **two independent
+wallets** — the customer deployed, funded, disputed, ruled and released; the
+provider accepted the SLA from an invitation link.
+
+| Field | Value |
+|---|---|
+| Contract | [`0x5006115944D7F593E401239aeDb64abEF13dCc0a`](https://explorer-bradbury.genlayer.com/address/0x5006115944D7F593E401239aeDb64abEF13dCc0a) |
+| Customer / provider | `0x456Ccff0…` / `0x79DD8260…` |
+| Escrow | **0.01 GEN** |
+| Outcome | **`PARTIAL_REFUND`** · 2500 bps · breached `SLA-1` · maintenance not qualified |
+| Settlement | customer **0.0025 GEN** (25%), provider **0.0075 GEN** (75%), **contract balance 0**, `payout_complete: true` |
+| Deployed source | 33,517 bytes, `04fe3a7b…` — byte-identical to `contracts/uptime_bond.py`, the first deployment carrying the LF-canonical hash |
+
+| # | Method | Signer | Transaction | Consensus | Execution |
+|---|---|---|---|---|---|
+| 1 | `deploy` | customer | [`0x8a8befa0…`](https://explorer-bradbury.genlayer.com/tx/0x8a8befa0332b4c73ac2ab09fb655fe9f38e1569b00130c99129c7930dafbafcc) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 2 | `fund` (payable 0.01 GEN) | customer | [`0xd95dce3c…`](https://explorer-bradbury.genlayer.com/tx/0xd95dce3cec29a55ccd6821fde43e3b43f22d239b06bcec09563449e35e056672) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 3 | `accept_sla` | provider | [`0x47f95e8f…`](https://explorer-bradbury.genlayer.com/tx/0x47f95e8f9956ae99ee7154059ac86aa5dfa5f4882561d27b1dcf85cc1695a82e) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 4 | `open_dispute` | customer | [`0xab3cfd69…`](https://explorer-bradbury.genlayer.com/tx/0xab3cfd69cfcf553f5f61628aeb1f76f6694bbcc7a5e56833027cfb68fab6cad9) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 5 | `rule` | customer | [`0xb151be00…`](https://explorer-bradbury.genlayer.com/tx/0xb151be00c6f1802d513afef8733ed7eb5a33ce14c8dea49f109f53b8cb282ae4) | 3 AGREE, 2 TIMEOUT | `FINISHED_WITH_RETURN` |
+| 6 | `release` | customer | [`0xbd6922e8…`](https://explorer-bradbury.genlayer.com/tx/0xbd6922e842d468b3bd1623c889bac282a1b843b36b5af8e57f211aef56a4ed3f) | 5 AGREE | `FINISHED_WITH_RETURN` |
+| 7 | `release` **duplicate — rejected** | provider | [`0x7f9aad2f…`](https://explorer-bradbury.genlayer.com/tx/0x7f9aad2fd451e35a8f726d27f86ca61506c4745d6f9faddcd5e94b9fdf83da10) | **5 DISAGREE** | **`FINISHED_WITH_ERROR`** |
+
+**Row 7 is a negative safety test**, unplanned and therefore worth more than a
+scripted one. The provider submitted a second `release()` 27 seconds after the
+customer's, from a tab still showing `RULED`. Bradbury queued it in the next
+slot; by the time it executed the agreement was `RESOLVED` and the single-shot
+guard refused it. **No state changed and no additional funds moved** — the
+settlement on-chain is the first release, unchanged, and the balance is zero.
+
+The frontend was hardened in `0505189` so a tab holding state it has not re-read
+cannot carry a write to signature. That fix does not close this exact race, and
+the pilot record says so plainly: at submission the contract genuinely still read
+`RULED`, because the competing release was in flight and unfinalized. Two parties
+can always submit inside one finality window; only the contract can arbitrate it,
+and it did. Full analysis in finding **F2** of
+[`docs/pilot/runs/2026-07-29-pilot.md`](docs/pilot/runs/2026-07-29-pilot.md).
+
 Consensus notes: 002-v2 ruled and released at a clean 5/5 AGREE. 001-v2 and
 003-v2 ruled on 3/5 majorities (with 2 validator `TIMEOUT` and 2
 `DETERMINISTIC_VIOLATION` respectively) and released 5/5 AGREE — correct
@@ -450,23 +500,32 @@ Stated plainly rather than glossed:
   customer account; running them concurrently lets a later submission land while
   an earlier one is unfinalized and get reverted. True parallel execution would
   need a separate signer per case. The harness README documents this.
-- **Fresh deployment is blocked by a Bradbury state-materialization
-  inconsistency.** On 27 July 2026 a deployment finalized `FINISHED_WITH_RETURN`
-  with 5/5 AGREE and recorded storage changes containing the correct constructor
-  state — and `gen_getContractCode`, `gen_call get_state` (at both
-  `latest-final` and `latest-nonfinal`) and the explorer contracts endpoint all
-  report nothing at the address the receipt names. The transaction envelope is
-  byte-for-byte equivalent to a scripted deployment that worked, on the same
-  pinned SDK. The one substantive difference is a non-zero `storage_proof` where
-  the working control has zero. **No funds were escrowed** — deployment
-  transfers no value, and the escrow is a separate later call that was never
-  made. Frozen pending a GenLayer answer; see
+- **One deployment materialized nothing, and the cause is still unknown.** On
+  27 July 2026 a deployment finalized `FINISHED_WITH_RETURN` with 5/5 AGREE and
+  recorded storage changes containing the correct constructor state — and
+  `gen_getContractCode`, `gen_call get_state` (at both `latest-final` and
+  `latest-nonfinal`) and the explorer contracts endpoint all report nothing at
+  the address the receipt names, to this day. **No funds were escrowed.**
+  Deployments resumed working on 29 July and the replacement materialized
+  normally, so the incident is **closed as no longer reproducing, not
+  explained**. Treat a finalized deploy receipt as a claim to verify, never as
+  proof — which is what `verifyDeployment`'s 13 checks exist for. See
   [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
-- **The live two-wallet pilot is prepared but not complete.** The run sheet and
-  evidence template are ready
-  ([`docs/pilot/PILOT-RUN.md`](docs/pilot/PILOT-RUN.md)); it cannot be executed
-  while fresh deployment is blocked. Nothing in this repository should be read
-  as claiming a completed fresh pilot.
+- **The pilot's balance evidence is on the contract side only.** The 29 July run
+  was reconstructed from the chain after the fact, so per-wallet before/after
+  balances were never captured and cannot be recovered — a signer's net is its
+  gross credit minus its own gas, and gas is not separable retrospectively. What
+  is proven is stronger for the escrow question and weaker for the wallet one:
+  the contract holds zero, `payout_complete` is `true`, and the two expected
+  shares sum to the escrow. No screenshots were taken either.
+- **Two parties can submit competing writes inside one finality window, and the
+  client cannot prevent it.** The pilot's duplicate `release()` was submitted 27
+  seconds after the first, when the contract still genuinely read `RULED`,
+  because the competing transaction was in flight and unfinalized — invisible in
+  contract state. The frontend's pre-submit re-read (`0505189`) closes the case
+  where state has *already* moved; it cannot close this one. The contract's
+  single-shot guard is what makes it harmless, and it did: 5/5 DISAGREE, no
+  state change, no funds moved.
 - **Deployed bytes were platform-dependent until `bde38c9`.** The frontend
   submits `contracts/uptime_bond.py` verbatim, and a Windows checkout produced
   CRLF (34,266 bytes, `93e1ddb9…`) where Linux produced LF (33,517 bytes,
@@ -485,8 +544,10 @@ Stated plainly rather than glossed:
   counterpart delta), derived by conservation, not the signer's net delta. Gas
   and settlement must not be conflated when reading balances.
 - **Some live negative checks were run, others remain Direct-Mode only.** The
-  duplicate-release guard (002-v2) and the `INSUFFICIENT_EVIDENCE` no-settlement
-  guard (004-v2) were exercised live and reverted as expected. The remaining
+  duplicate-release guard was exercised live **twice** — scripted on 002-v2, and
+  again unplanned in the 29 July browser pilot when the provider submitted a
+  second `release()` (5/5 DISAGREE, no state change, no funds moved) — as was the
+  `INSUFFICIENT_EVIDENCE` no-settlement guard (004-v2). The remaining
   access-control and premature-state reverts are covered thoroughly in Direct
   Mode but not re-run live, since each would cost a separate deployment and
   ~30 minutes per reverting transaction.
@@ -494,10 +555,14 @@ Stated plainly rather than glossed:
   1 hour and deployments use 24. Deterministic time progression is covered in
   Direct Mode via `warp`. A dedicated short-window deployment would be needed to
   demonstrate it live.
-- **The frontend was not verified in a browser.** It builds, typechecks, lints,
-  passes its tests, and serves on port 3000, and its data layer reads the live
-  contracts — but no browser session confirmed the rendered UI. (The README on
-  the repository page *was* render-checked; the dApp itself was not.)
+- **The frontend is now browser-verified end to end, by the pilot itself.** The
+  29 July run was driven entirely through the deployed app by two wallets in two
+  profiles — create wizard, deploy, fund, invitation link, provider acceptance,
+  dispute, ruling, release — so every screen on the critical path was exercised
+  against a live contract. Automated checks (axe on 22 page/viewport
+  combinations, a mocked-wallet e2e suite, a visual sweep) cover the rest each
+  CI run. What is still missing is a *recorded* browser session: no screenshots
+  were captured during the pilot.
 - **The GenLayer CLI cannot call payable methods.** Both 0.39.1 and 0.39.2
   hardcode `value: 0n`, which is why `deploy/scripts/` exists.
 - **`genlayer schema` and `genlayer code` are Studio-only.** Deployed source was

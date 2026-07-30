@@ -1,5 +1,18 @@
 # GenLayer support report — paste-ready
 
+> **Not sent, and superseded — do not paste this as-is.** Deployments resumed
+> working on 2026-07-29 (replacement
+> `0x8a8befa0332b4c73ac2ab09fb655fe9f38e1569b00130c99129c7930dafbafcc` →
+> `0x5006115944D7F593E401239aeDb64abEF13dCc0a`, materialized and driven through a
+> full lifecycle), so the incident no longer reproduces. **The cause was never
+> explained**, and `0x0c8e748c…` / `0xc09d70CE…` still behave exactly as
+> described below.
+>
+> If this is still worth reporting — and it may be, since an unexplained
+> materialization failure that stopped on its own is the kind that returns —
+> update the closing paragraph to say it is no longer reproducing before
+> sending. Everything above that paragraph remains accurate.
+
 Copy from the rule below. Full evidence:
 [`BRADBURY-MATERIALIZATION-INCIDENT.md`](BRADBURY-MATERIALIZATION-INCIDENT.md).
 
