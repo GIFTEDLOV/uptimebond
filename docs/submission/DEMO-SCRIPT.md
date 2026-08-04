@@ -1,12 +1,14 @@
-# Demo video script — 2:45
+# Guided walkthrough script — 2:45
 
-Shot-by-shot narration for the submission video. Timings are cumulative.
-Written to be read aloud at a normal pace; each block is roughly the words that
-fit its slot.
+The narrated route through UptimeBond, in the order the product is best seen.
+The submission itself carries no video; this is here so a reviewer can follow
+the intended path, and so the walkthrough can be recorded later without
+redesigning it. Timings are cumulative and written to be read aloud at a normal
+pace; each block is roughly the words that fit its slot.
 
-**Record at 1440×900.** Testnet accounts only. Pre-fund both wallets so no
-faucet wait is on camera. Do not show a seed phrase, a private key, or a wallet
-unlock screen at any point.
+**If you do record it: 1440×900.** Testnet accounts only. Pre-fund both wallets
+so no faucet wait is on camera. Do not show a seed phrase, a private key, or a
+wallet unlock screen at any point.
 
 ---
 

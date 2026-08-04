@@ -31,16 +31,13 @@ never explained**, and the original evidence stands unrevised:
 [`docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md`](../incidents/BRADBURY-MATERIALIZATION-INCIDENT.md).
 No funds were ever escrowed or lost by it — deployment transfers no value.
 
-### Remaining placeholders
+### Evidence completeness
 
-| # | Placeholder | Source | Section |
-|---|---|---|---|
-| 1 | `<VIDEO_URL>` | recording | Live URLs, Demo video |
-
-The pilot placeholders are filled. Two gaps in the pilot evidence are recorded
-rather than papered over: **per-wallet balance deltas and screenshots were not
-captured**, because the run was reconstructed from the chain afterwards. The
-contract-side settlement proof is complete and independently reproducible.
+No placeholders remain; this package is submission-ready exactly as written. Two
+gaps in the pilot evidence are recorded rather than papered over: **per-wallet
+balance deltas and screenshots were not captured**, because the run was
+reconstructed from the chain afterwards. The contract-side settlement proof is
+complete and independently reproducible.
 
 ## One-line pitch
 
@@ -122,7 +119,6 @@ class of problem GenLayer exists for.
 
 - App: **https://uptimebond.vercel.app**
 - Live cases (four verified outcomes): https://uptimebond.vercel.app/demo
-- Demo video: **`<VIDEO_URL>`**
 - Explorer: https://explorer-bradbury.genlayer.com
 
 ## Repository
@@ -200,15 +196,16 @@ Not captured: per-wallet before/after balances and screenshots. The run was
 reconstructed from the chain afterwards, and a signer's net delta is its gross
 credit minus its own gas, which is not separable retrospectively.
 
-## Demo video
+## Guided walkthrough
 
-Script and shot list: `docs/submission/DEMO-SCRIPT.md` (2:45, with a cut to 2:00
-noted). Recorded at 1440×900 on testnet accounts; no key or seed material appears
-on camera. Link: **`<VIDEO_URL>`**
+The app is submitted to be driven directly: every claim below is reproducible in
+the browser against the live contracts. `docs/submission/DEMO-SCRIPT.md` is the
+narrated route through the product — problem, create, evidence, ruling,
+settlement — for a reviewer who wants the intended order.
 
 ## Testing evidence
 
-- 57 unit tests (validation, action state machine, registry, evidence
+- 159 unit tests (validation, action state machine, registry, evidence
   normalization, formatting, role logic).
 - 16-check mocked-wallet browser e2e (`npm run e2e`) — no GEN spent.
 - Accessibility gate (`npm run a11y`): axe-core across WCAG 2.0/2.1 A + AA on all

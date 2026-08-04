@@ -489,7 +489,7 @@ push and pull request to `main`.
 | [Pilot background kit](docs/pilot/PILOT.md) | Evidence publishing, threat considerations, options and trade-offs |
 | [Evidence record template](docs/pilot/EVIDENCE-RECORD.md) | The blank form to fill in during a run |
 | [Submission package](docs/submission/SUBMISSION.md) | Pitch, architecture summary, testing evidence and limitations |
-| [Demo script](docs/submission/DEMO-SCRIPT.md) | Shot list and narration for the walkthrough video |
+| [Demo script](docs/submission/DEMO-SCRIPT.md) | A narrated route through the product, in the intended order |
 | [Materialization incident](docs/incidents/BRADBURY-MATERIALIZATION-INCIDENT.md) | A deployment that finalized and produced no contract — investigation and closing note |
 | [Support report](docs/incidents/GENLAYER-SUPPORT-REPORT.md) | The paste-ready version of that incident, marked superseded |
 | [Deploy harness](deploy/scripts/README.md) | Why the scripts exist and the Bradbury behaviours they handle |
